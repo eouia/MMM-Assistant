@@ -1,0 +1,14 @@
+{
+  "name": "MMM-TelegramBot",
+  "version": "1.0.0",
+  "dependencies": {
+    "google-assistant": "^0.1.12",
+    "node-aplay": "^1.0.3",
+    "node-record-lpcm16": "^0.3.0",
+    "snowboy": "^1.2.0",
+    "speaker": "^0.4.0"
+  },
+  "devDependencies": {
+    "electron-rebuild": "^1.6.0"
+  }
+}
