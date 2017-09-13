@@ -1,13 +1,14 @@
 'use strict'
 
-const Sound = require('node-aplay');
+const Sound = require('node-aplay')
 const path = require('path')
-const record = require('node-record-lpcm16');
-const Detector = require('snowboy').Detector;
-const Models = require('snowboy').Models;
+const record = require('node-record-lpcm16')
+const Detector = require('snowboy').Detector
+const Models = require('snowboy').Models
 const Speaker = require('speaker')
 const GoogleAssistant = require('google-assistant')
-
+const Speech = require('@google-cloud/speech')
+const exec = require('child_process').exec
 
 var NodeHelper = require("node_helper")
 
@@ -18,16 +19,14 @@ module.exports = NodeHelper.create({
   },
 
   initialize: function (config) {
-    this.snowboy = {}
-    this.assistant = {}
-
-
     this.config = config
 
     this.config.assistant.auth.keyFilePath
       = path.resolve(__dirname, this.config.assistant.auth.keyFilePath)
     this.config.assistant.auth.savedTokensPath
       = path.resolve(__dirname, this.config.assistant.auth.savedTokensPath)
+    this.config.speech.auth.keyFilename
+      = path.resolve(__dirname, this.config.speech.auth.keyFilename)
     this.sendSocketNotification('READY')
   },
 
@@ -37,10 +36,10 @@ module.exports = NodeHelper.create({
         this.initialize(payload)
         this.status = 'READY'
         break;
-      case 'SNOWBOY_STANDBY':
-        if(this.status !== 'SNOWBOY_STANDBY') {
-          this.status = 'SNOWBOY_STANDBY'
-          this.activateSnowboy()
+      case 'HOTWORD_STANDBY':
+        if(this.status !== 'HOTWORD_STANDBY') {
+          this.status = 'HOTWORD_STANDBY'
+          this.activateHotword()
         }
         break;
       case 'ACTIVATE_ASSISTANT':
@@ -50,15 +49,46 @@ module.exports = NodeHelper.create({
         }
         break;
       case 'ACTIVATE_COMMAND':
-      if (this.status !== 'ACTIVATE_ASSISTANT') {
-        this.status = 'ACTIVATE_ASSISTANT'
-        this.activateAssistant('COMMAND')
-      }
+        if (this.status !== 'ACTIVATE_ASSISTANT') {
+          this.status = 'ACTIVATE_ASSISTANT'
+          this.activateCommand()
+        }
+        break
+      case 'SPEAK':
+        if (this.status !== 'ACTIVATE_SPEAK') {
+          this.status = 'ACTIVATE_SPEAK'
+          this.activateSpeak(payload)
+        }
+        break;
     }
   },
 
-  activateSnowboy: function() {
+  activateSpeak: function(text) {
+    //@TODO espeak!
+    console.log("SPEAKING:", text)
+    var script = "espeak"
+    script += (
+      (this.config.espeak.language)
+        ? (" -v " + this.config.espeak.language)
+        : ""
+    )
+    script += (
+      (this.config.espeak.speed)
+        ? (" -s " + this.config.espeak.speed)
+        : ""
+    )
+    script += ((this.config.espeak.ssml) ? (" -m") : "")
+    script += " \'" + text + "\'"
+    exec (script, (err, stdout, stderr)=>{
+      if (err == null) {
+        console.log("[ASSTNT] Speak: ", text)
+      }
+    })
+  },
+
+  activateHotword: function() {
     console.log('[ASSTNT] Snowboy Activated')
+    new Sound(path.resolve(__dirname, 'resources/ding.wav')).play();
     var models = new Models();
     this.config.snowboy.models.forEach((model)=>{
       model.file = path.resolve(__dirname, model.file)
@@ -71,9 +101,10 @@ module.exports = NodeHelper.create({
       models: models,
       audioGain: 2.0
     })
-    detector.on('error', function () {
-      console.log('ERROR')
+    detector.on('error', function (err) {
+      console.log('[ASSTNT] Detector Error', err)
       record.stop()
+      this.sendSocketNotification('ERROR', 'DETECTOR')
       return
     })
 
@@ -116,24 +147,32 @@ module.exports = NodeHelper.create({
           }
 
         })
-
-        .on('end-of-utterance', () => record.stop())
-        .on('transcription', (text) => {
-          if (mode == 'COMMAND') {
-            this.sendSocketNotification('COMMAND', text)
-          }
+        .on('end-of-utterance', () => {
           record.stop()
+
+        })
+        .on('transcription', (text) => {
+          //if (mode == 'COMMAND') {
+            this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
+          //}
+          record.stop()
+          //speaker.end()
         })
         .on('ended', (error, continueConversation) => {
-          if (error) console.log('Conversation Ended Error:', error)
-          else if (continueConversation) assistant.start()
+          if (error) {
+            console.log('[ASSTNT] Conversation Ended Error:', error)
+            record.stop()
+            this.sendSocketNotification('ERROR', 'CONVERSATION ENDED')
+          } else if (continueConversation) assistant.start()
           else {
             record.stop()
             this.sendSocketNotification('ASSISTANT_FINISHED')
           }
         })
         .on('error', (error) => {
-          console.log('Conversation Error:', error);
+          console.log('[ASSTNT] Conversation Error:', error);
+          record.stop()
+          this.sendSocketNotification('ERROR', 'CONVERSATION')
         })
 
 
@@ -162,7 +201,47 @@ module.exports = NodeHelper.create({
       })
       .on('started', startConversation)
       .on('error', (error) => {
-        console.log('Assistant Error:', error)
+        console.log('[ASSTNT] Assistant Error:', error)
+        record.stop()
+        speaker.end()
+        this.sendScoketNotification('ERROR', 'ASSISTANT')
       })
+  },
+
+  activateCommand: function() {
+    const speech = Speech(this.config.speech.auth)
+    const request = {
+      config: this.config.speech.request,
+      interimResults: false // If you want interim results, set this to true
+    }
+    const recognizeStream = speech.streamingRecognize(request)
+      .on('error', (err)=>{
+        console.log('[ASSTNT] RecognizeStream Error: ', err)
+        record.stop()
+        this.sendSocketNotification('ERROR', 'RECOGNIZESTREAM')
+      })
+      .on('data', (data) => {
+        if ((data.results[0] && data.results[0].alternatives[0])) {
+          console.log(
+            "[ASSTNT] Command recognized:",
+            data.results[0].alternatives[0].transcript
+          )
+          this.sendSocketNotification(
+            'COMMAND',
+            data.results[0].alternatives[0].transcript
+          )
+          record.stop()
+        }
+      })
+
+  // Start recording and send the microphone input to the Speech API
+    record
+      .start(this.config.record)
+      .on('error', (err)=>{
+        console.log("[ASSTNT] Recording Error: ",err)
+        record.stop()
+        this.sendSocketNotification('ERROR', 'RECORD ERROR')
+      })
+      .pipe(recognizeStream);
   }
 })

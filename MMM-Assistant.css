@@ -1,0 +1,31 @@
+.ASSTNT .status {
+  border-radius:10px;
+  background-color:#33E;
+}
+
+.ASSTNT .status.START {
+  color:#666;
+}
+
+.ASSTNT .status.HOTWORD_STANDBY {
+  color:#999;
+}
+
+.ASSTNT .status.ACTIVATE_ASSISTANT {
+  color:#39F;
+}
+.ASSTNT .status.ACTIVATE_COMMAND {
+  color:#3F9;
+}
+
+.ASSTNT .status.HOTWORD_DETECTED {
+  color:#F35;
+}
+
+.ASSTNT .status.LISTENING {
+  color:#3F5;
+}
+
+.ASSTNT .status.SPEAK {
+  color:#FC3;
+}
