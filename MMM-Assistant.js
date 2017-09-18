@@ -242,11 +242,8 @@ Module.register("MMM-Assistant", {
     var text = ""
     if (handler.args !== null) {
       target = handler.args['command']
-      console.log("handler", handler)
       this.commands.forEach((c)=>{
-        console.log("COM:", c.command)
         var tc = c.command.replace(/\:\S+/g, "").trim()
-        console.log("TC", tc)
         if (tc == target) {
           text += (c.description) ? c.description : ""
           text += "<br>"
@@ -363,7 +360,6 @@ Module.register("MMM-Assistant", {
         this.loadCSS()
         var commands = []
         MM.getModules().enumerate((m) => {
-          console.log('getCommands', m.name)
           if (m.name !== 'MMM-Assistant') {
             if (typeof m.getCommands == 'function') {
               var tc = m.getCommands(new AssistantCommandRegister(
@@ -392,7 +388,6 @@ Module.register("MMM-Assistant", {
 
   // socketNotificationReceived from helper
   socketNotificationReceived: function (notification, payload) {
-    console.log(notification)
     switch(notification) {
       case 'HOTWORD_DETECTED':
         this.status = "HOTWORD_DETECTED"
@@ -427,7 +422,6 @@ Module.register("MMM-Assistant", {
         //this.sendSocketNotification("HOTWORD_STANDBY")
         break
       case 'MODE':
-        console.log('MODE', payload)
         this.status = payload.mode
         if (payload.mode == 'SPEAK_ENDED') {
           this.sendNotification("HIDE_ALERT");
@@ -484,7 +478,8 @@ Module.register("MMM-Assistant", {
       } else { // command has no args pattern
         argsGroup = []
       }
-      var matched = commandPattern.toRegExp().exec(msgText)
+      var matched = ("^" + commandPattern).toRegExp().exec(msgText)
+
       if (matched) {
         commandFound = 1
         if (argsGroup) {
@@ -498,7 +493,6 @@ Module.register("MMM-Assistant", {
       }
     }
     if (commandFound == 1) {
-      console.log("args", args)
       if (c.callback !== 'notificationReceived') {
         var callbacks = {
           response: this.response.bind(this)

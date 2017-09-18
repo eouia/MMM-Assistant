@@ -117,7 +117,6 @@ module.exports = NodeHelper.create({
     text = text.replace(/<[^>]*>/g, "")
     text = text.replace(/\"/g, "'")
     text = text.trim()
-    console.log("SPEAKING:", text)
     this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED'})
     say(text, this.config.speak.language, (err) => {
       if (!err) {
@@ -131,7 +130,6 @@ module.exports = NodeHelper.create({
 
   activateSpeak_espeak: function(text) {
     //@DEPRECATED
-    console.log("SPEAKING:", text)
     this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED'})
     var script = "espeak"
     script += (
@@ -203,7 +201,6 @@ module.exports = NodeHelper.create({
 
       conversation
         .on('audio-data', (data) => {
-          console.log("ad")
           //record.stop()
           const now = new Date().getTime()
           if (mode == 'ASSISTANT') {
@@ -223,11 +220,9 @@ module.exports = NodeHelper.create({
 
         })
         .on('end-of-utterance', () => {
-          console.log("eou")
           record.stop()
         })
         .on('transcription', (text) => {
-            console.log("tr")
             this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
             transcription = text
             console.log("[ASSTNT] GA Transcription: ", transcription)
@@ -236,10 +231,8 @@ module.exports = NodeHelper.create({
               console.log("[ASSTNT] Command recognized:",transcription)
               this.sendSocketNotification('COMMAND',transcription)
             }
-            console.log("Transcription ended")
         })
         .on('ended', (error, continueConversation) => {
-          console.log("ended")
           if (error) {
             console.log('[ASSTNT] Conversation Ended Error:', error)
             this.sendSocketNotification('ERROR', 'CONVERSATION ENDED')
@@ -253,7 +246,6 @@ module.exports = NodeHelper.create({
           else {
             record.stop()
             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
-            console.log('mode??', mode)
           }
         })
         .on('error', (error) => {
@@ -297,7 +289,6 @@ module.exports = NodeHelper.create({
 
   activateCommand: function() {
     this.sendSocketNotification('MODE', {mode:'COMMAND_STARTED'})
-    console.log("commandAuthIndex:", this.commandAuthIndex)
     const speech = Speech(this.config.speech.auth[this.commandAuthIndex++])
     if (this.commandAuthIndex >= this.commandAuthMax) this.commandAuthIndex = 0
 
