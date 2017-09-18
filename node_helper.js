@@ -2,6 +2,7 @@
 
 const Sound = require('node-aplay')
 const path = require('path')
+const fs = require('fs')
 const record = require('node-record-lpcm16')
 const Detector = require('snowboy').Detector
 const Models = require('snowboy').Models
@@ -9,6 +10,7 @@ const Speaker = require('speaker')
 const GoogleAssistant = require('google-assistant')
 const Speech = require('@google-cloud/speech')
 const exec = require('child_process').exec
+//const tts = require('picotts')
 
 var NodeHelper = require("node_helper")
 
@@ -16,6 +18,8 @@ module.exports = NodeHelper.create({
   start: function () {
     this.config = {}
     this.status = 'NOTACTIVATED'
+    this.commandAuthIndex = 0
+    this.commandAuthMax = 0
   },
 
   initialize: function (config) {
@@ -25,9 +29,15 @@ module.exports = NodeHelper.create({
       = path.resolve(__dirname, this.config.assistant.auth.keyFilePath)
     this.config.assistant.auth.savedTokensPath
       = path.resolve(__dirname, this.config.assistant.auth.savedTokensPath)
-    this.config.speech.auth.keyFilename
-      = path.resolve(__dirname, this.config.speech.auth.keyFilename)
-    this.sendSocketNotification('READY')
+
+    this.commandAuthMax = this.config.speech.auth.length
+    for(var i=0; i<this.commandAuthMax; i++) {
+      this.config.speech.auth[i].keyFilename
+        = path.resolve(__dirname, this.config.speech.auth[i].keyFilename)
+    }
+
+
+    this.sendSocketNotification('MODE', {mode:"INITILIZED"})
   },
 
   socketNotificationReceived: function (notification, payload) {
@@ -35,23 +45,28 @@ module.exports = NodeHelper.create({
       case 'CONFIG':
         this.initialize(payload)
         this.status = 'READY'
-        break;
+        break
       case 'HOTWORD_STANDBY':
         if(this.status !== 'HOTWORD_STANDBY') {
           this.status = 'HOTWORD_STANDBY'
           this.activateHotword()
         }
-        break;
+        break
       case 'ACTIVATE_ASSISTANT':
         if (this.status !== 'ACTIVATE_ASSISTANT') {
           this.status = 'ACTIVATE_ASSISTANT'
           this.activateAssistant('ASSISTANT')
         }
-        break;
+        break
       case 'ACTIVATE_COMMAND':
-        if (this.status !== 'ACTIVATE_ASSISTANT') {
-          this.status = 'ACTIVATE_ASSISTANT'
-          this.activateCommand()
+        if (this.status !== 'ACTIVATE_COMMAND') {
+          this.status = 'ACTIVATE_COMMAND'
+          if(this.config.system.commandRecognition == 'google-cloud-speech') {
+            this.activateCommand()
+          } else if (this.config.system.commandRecognition == 'google-assistant') {
+            this.activateAssistant('COMMAND')
+          }
+
         }
         break
       case 'SPEAK':
@@ -59,13 +74,65 @@ module.exports = NodeHelper.create({
           this.status = 'ACTIVATE_SPEAK'
           this.activateSpeak(payload)
         }
-        break;
+        break
+      case 'REBOOT':
+        execute('sudo reboot now', function(callback){
+          console.log(callback)
+        })
+        break
+      case 'SHUTDOWN':
+        execute('sudo shutdown -t 1', function(callback){
+          console.log(callback)
+        })
+        break
+      case 'TEST':
+        this.test(payload)
+        break
     }
+  },
+  test: function(test) {
+    this.sendSocketNotification('COMMAND', test)
   },
 
   activateSpeak: function(text) {
-    //@TODO espeak!
+    var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
+
+    function getTmpFile() {
+    	var random = Math.random().toString(36).slice(2),
+    		path = '/tmp/' + random + '.wav'
+
+    	return (!fs.existsSync(path)) ? path : getTmpFile()
+    }
+
+    function say(text, lang, cb) {
+    	var file = getTmpFile(),
+    		command = commandTmpl.replace('{{lang}}', lang).replace('{{text}}', text).replace(/\{\{file\}\}/g, file)
+    	  exec(command, function(err) {
+    		cb && cb(err)
+    		fs.unlink(file, ()=>{})
+    	})
+    }
+
+    text = text.trim()
+    text = text.replace(/<[^>]*>/g, "")
+    text = text.replace(/\"/g, "'")
+    text = text.trim()
     console.log("SPEAKING:", text)
+    this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED'})
+    say(text, this.config.speak.language, (err) => {
+      if (!err) {
+        console.log("[ASSTNT] Speak: ", text)
+        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED'})
+      } else {
+        console.log("[ASSTNT] Speak Error", err)
+      }
+    })
+  },
+
+  activateSpeak_espeak: function(text) {
+    //@DEPRECATED
+    console.log("SPEAKING:", text)
+    this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED'})
     var script = "espeak"
     script += (
       (this.config.espeak.language)
@@ -82,12 +149,14 @@ module.exports = NodeHelper.create({
     exec (script, (err, stdout, stderr)=>{
       if (err == null) {
         console.log("[ASSTNT] Speak: ", text)
+        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED'})
       }
     })
   },
 
   activateHotword: function() {
     console.log('[ASSTNT] Snowboy Activated')
+    this.sendSocketNotification('MODE', {mode:'HOTWORD_STARTED'})
     new Sound(path.resolve(__dirname, 'resources/ding.wav')).play();
     var models = new Models();
     this.config.snowboy.models.forEach((model)=>{
@@ -110,8 +179,9 @@ module.exports = NodeHelper.create({
 
     detector.on('hotword', (index, hotword, buffer)=>{
       record.stop()
-      new Sound(path.resolve(__dirname, 'resources/dong.wav')).play();
+      new Sound(path.resolve(__dirname, 'resources/dong.wav')).play()
       this.sendSocketNotification('HOTWORD_DETECTED', hotword)
+      this.sendSocketNotification('MODE', {mode:'HOTWORD_DETECTED'})
       return
     })
 
@@ -119,7 +189,9 @@ module.exports = NodeHelper.create({
   },
 
   activateAssistant: function(mode = 'ASSISTANT') {
+    var transcription = ""
     console.log('[ASSTNT] Assistant Activated')
+    this.sendSocketNotification('MODE', {mode:'ASSISTANT_STARTED'})
     const assistant = new GoogleAssistant(this.config.assistant)
 
     const startConversation = (conversation) => {
@@ -131,9 +203,11 @@ module.exports = NodeHelper.create({
 
       conversation
         .on('audio-data', (data) => {
-          record.stop()
+          console.log("ad")
+          //record.stop()
           const now = new Date().getTime()
           if (mode == 'ASSISTANT') {
+            this.sendSocketNotification('MODE', {mode:'ASSISTANT_SPEAKING'})
             speaker.write(data);
             spokenResponseLength += data.length;
             const audioTime
@@ -143,30 +217,43 @@ module.exports = NodeHelper.create({
               speaker.end();
             }, audioTime - Math.max(0, now - speakerOpenTime));
           } else {
-            speaker.end();
+            //record.stop()
+            speaker.end()
           }
 
         })
         .on('end-of-utterance', () => {
+          console.log("eou")
           record.stop()
-
         })
         .on('transcription', (text) => {
-          //if (mode == 'COMMAND') {
+            console.log("tr")
             this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
-          //}
-          record.stop()
-          //speaker.end()
+            transcription = text
+            console.log("[ASSTNT] GA Transcription: ", transcription)
+            //record.stop()
+            if (mode == 'COMMAND') {
+              console.log("[ASSTNT] Command recognized:",transcription)
+              this.sendSocketNotification('COMMAND',transcription)
+            }
+            console.log("Transcription ended")
         })
         .on('ended', (error, continueConversation) => {
+          console.log("ended")
           if (error) {
             console.log('[ASSTNT] Conversation Ended Error:', error)
-            record.stop()
             this.sendSocketNotification('ERROR', 'CONVERSATION ENDED')
-          } else if (continueConversation) assistant.start()
+          } else if (continueConversation) {
+            if (mode == 'ASSISTANT') {
+              assistant.start()
+            } else {
+              //@.@ What? There is no stop-conversation in gRpc ?????
+            }
+          }
           else {
             record.stop()
-            this.sendSocketNotification('ASSISTANT_FINISHED')
+            this.sendSocketNotification('ASSISTANT_FINISHED', mode)
+            console.log('mode??', mode)
           }
         })
         .on('error', (error) => {
@@ -209,7 +296,11 @@ module.exports = NodeHelper.create({
   },
 
   activateCommand: function() {
-    const speech = Speech(this.config.speech.auth)
+    this.sendSocketNotification('MODE', {mode:'COMMAND_STARTED'})
+    console.log("commandAuthIndex:", this.commandAuthIndex)
+    const speech = Speech(this.config.speech.auth[this.commandAuthIndex++])
+    if (this.commandAuthIndex >= this.commandAuthMax) this.commandAuthIndex = 0
+
     const request = {
       config: this.config.speech.request,
       interimResults: false // If you want interim results, set this to true
@@ -221,6 +312,7 @@ module.exports = NodeHelper.create({
         this.sendSocketNotification('ERROR', 'RECOGNIZESTREAM')
       })
       .on('data', (data) => {
+        this.sendSocketNotification('MODE', {mode:'COMMAND_LISTENED'})
         if ((data.results[0] && data.results[0].alternatives[0])) {
           console.log(
             "[ASSTNT] Command recognized:",
@@ -245,3 +337,7 @@ module.exports = NodeHelper.create({
       .pipe(recognizeStream);
   }
 })
+
+function execute(command, callback){
+  exec(command, function(error, stdout, stderr){ callback(stdout); });
+}

@@ -10,8 +10,8 @@
     "speaker": "^0.4.0"
   },
   "scripts": {
-    "preinstall": "sudo apt-get update && sudo apt-get upgrade && sudo apt-get install libmagic-dev libatlas-base-dev espeak libasound2-dev sox libsox-fmt-all",
-    "postinstall": "npm install --save-dev electron-rebuild && ./node_modules/.bin/electron-rebuild --pre-gyp-fix"
+    "preinstall": "sudo apt-get update && sudo apt-get upgrade && sudo apt-get install libmagic-dev libatlas-base-dev espeak libasound2-dev sox libsox-fmt-all libttspico-utils",
+    "postinstall": "cd MMM-Assistant && npm install --save-dev electron-rebuild && ./node_modules/.bin/electron-rebuild --pre-gyp-fix"
   },
   "devDependencies": {
     "electron-rebuild": "^1.6.0",

@@ -1,31 +1,79 @@
+.yourcommand {
+  font-weight:bold;
+  color:#FED;
+}
+
+.answer {
+  font-weight:normal;
+  color:#CCC;
+  font-size:0.8em;
+}
+
+.answer .command {
+  background-color:#69F;
+  border-radius:3px;
+  color:#FFF;
+  padding:3px;
+}
+
+.answer .args {
+  color:#F96;
+}
+
+.answer .module {
+  background-color:#F96;
+  border-radius:3px;
+  color:#FFF;
+  padding:3px;
+}
+
+.answer .module.hidden {
+  background-color:#333;
+}
+
 .ASSTNT .status {
-  border-radius:10px;
-  background-color:#33E;
+  border-radius:50%;
+  background-color:#333;
+  font-size:60px;
+  line-height:80px;
+  text-align: center;
+  vertical-align: middle;
+  width:80px;
+  height:80px;
 }
 
-.ASSTNT .status.START {
-  color:#666;
-}
-
-.ASSTNT .status.HOTWORD_STANDBY {
+.ASSTNT .status.INITIALIZED {
   color:#999;
 }
 
-.ASSTNT .status.ACTIVATE_ASSISTANT {
-  color:#39F;
-}
-.ASSTNT .status.ACTIVATE_COMMAND {
-  color:#3F9;
+.ASSTNT .status.HOTWORD_STARTED {
+  color:#FFF;
 }
 
 .ASSTNT .status.HOTWORD_DETECTED {
-  color:#F35;
+  color:#F66;
 }
 
-.ASSTNT .status.LISTENING {
-  color:#3F5;
+.ASSTNT .status.ASSISTANT_STARTED {
+  color:#FFF;
 }
 
-.ASSTNT .status.SPEAK {
-  color:#FC3;
+.ASSTNT .status.ASSISTANT_SPEAKING {
+  color:#F66;
+}
+
+.ASSTNT .status.COMMAND_STARTED {
+  color:#FFF;
+}
+
+.ASSTNT .status.COMMAND_LISTENED {
+  color:#F66;
+}
+
+.ASSTNT .status.SPEAK_STARTED {
+  color:#F66;
+}
+
+.ASSTNT .status.SPEAK_ENDED {
+  color:#FFF;
 }
