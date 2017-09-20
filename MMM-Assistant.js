@@ -350,8 +350,14 @@ Module.register("MMM-Assistant", {
     return wrapper
   },
 
-  notificationReceived: function (notification, payload) {
+  notificationReceived: function (notification, payload, sender) {
     switch(notification) {
+      case 'ASSISTANT_REQUEST_PAUSE':
+        this.sendSocketNotification('PAUSE', sender.name)
+        break
+      case 'ASSISTANT_REQUEST_RESUME':
+        this.sendSocketNotification('RESUME', sender.name)
+        break
       case 'ALL_MODULES_STARTED':
         if (this.isAlreadyInitialized) {
           return
@@ -377,11 +383,13 @@ Module.register("MMM-Assistant", {
         this.sendSocketNotification('HOTWORD_STANDBY')
         //this.sendSocketNotification('TEST', 'say Hi, nice to meet you.')
         break;
+      /*
       case 'ASSTNT_TELL_ADMIN':
         if (typeof payload == 'string') {
           //@TODO Speak payload!
         }
         break;
+      */
     }
 
   },
@@ -389,6 +397,16 @@ Module.register("MMM-Assistant", {
   // socketNotificationReceived from helper
   socketNotificationReceived: function (notification, payload) {
     switch(notification) {
+      case 'PAUSED':
+        this.status == 'PAUSED'
+        this.updateDom()
+        this.sendNotification('ASSISTANT_PAUSED')
+        break;
+      case 'RESUMED':
+        this.status == 'HOTWORD_STANDBY'
+        this.sendSocketNotification("HOTWORD_STANDBY")
+        this.sendNotification('ASSISTANT_RESUMED')
+        break;
       case 'HOTWORD_DETECTED':
         this.status = "HOTWORD_DETECTED"
         console.log("[ASSTNT] Hotword detected:", payload)
@@ -408,7 +426,6 @@ Module.register("MMM-Assistant", {
           this.status = "HOTWORD_STANDBY";
           this.sendSocketNotification("HOTWORD_STANDBY")
         }
-
         break
       case 'COMMAND':
         this.status = "COMMAND";
@@ -434,6 +451,7 @@ Module.register("MMM-Assistant", {
 
 
   hotwordDetected : function (type) {
+
     if (type == 'ASSISTANT') {
       this.sendSocketNotification('ACTIVATE_ASSISTANT')
       this.status = 'ACTIVATE_ASSISTANT'
@@ -441,6 +459,7 @@ Module.register("MMM-Assistant", {
       this.sendSocketNotification('ACTIVATE_COMMAND')
       this.status = 'ACTIVATE_COMMAND'
     }
+
   },
 
   parseCommand: function(msg, cb) {

@@ -20,6 +20,7 @@ module.exports = NodeHelper.create({
     this.status = 'NOTACTIVATED'
     this.commandAuthIndex = 0
     this.commandAuthMax = 0
+    this.pause = new Set()
   },
 
   initialize: function (config) {
@@ -42,6 +43,14 @@ module.exports = NodeHelper.create({
 
   socketNotificationReceived: function (notification, payload) {
     switch(notification) {
+      case 'PAUSE':
+        this.pause.add(payload)
+        //if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
+        break
+      case 'RESUME':
+        this.pause.delete(payload)
+        if (this.pause.size == 0) this.sendSocketNotification('RESUMED')
+        break
       case 'CONFIG':
         this.initialize(payload)
         this.status = 'READY'
@@ -49,22 +58,22 @@ module.exports = NodeHelper.create({
       case 'HOTWORD_STANDBY':
         if(this.status !== 'HOTWORD_STANDBY') {
           this.status = 'HOTWORD_STANDBY'
-          this.activateHotword()
+          if(this.pause.size == 0) this.activateHotword()
         }
         break
       case 'ACTIVATE_ASSISTANT':
         if (this.status !== 'ACTIVATE_ASSISTANT') {
           this.status = 'ACTIVATE_ASSISTANT'
-          this.activateAssistant('ASSISTANT')
+          if(this.pause.size == 0) this.activateAssistant('ASSISTANT')
         }
         break
       case 'ACTIVATE_COMMAND':
         if (this.status !== 'ACTIVATE_COMMAND') {
           this.status = 'ACTIVATE_COMMAND'
           if(this.config.system.commandRecognition == 'google-cloud-speech') {
-            this.activateCommand()
+            if(this.pause.size == 0) this.activateCommand()
           } else if (this.config.system.commandRecognition == 'google-assistant') {
-            this.activateAssistant('COMMAND')
+            if(this.pause.size == 0) this.activateAssistant('COMMAND')
           }
 
         }
@@ -72,7 +81,7 @@ module.exports = NodeHelper.create({
       case 'SPEAK':
         if (this.status !== 'ACTIVATE_SPEAK') {
           this.status = 'ACTIVATE_SPEAK'
-          this.activateSpeak(payload)
+          if(this.pause.size == 0) this.activateSpeak(payload)
         }
         break
       case 'REBOOT':
@@ -95,12 +104,12 @@ module.exports = NodeHelper.create({
   },
 
   activateSpeak: function(text) {
+
     var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
 
     function getTmpFile() {
     	var random = Math.random().toString(36).slice(2),
     		path = '/tmp/' + random + '.wav'
-
     	return (!fs.existsSync(path)) ? path : getTmpFile()
     }
 
@@ -122,6 +131,9 @@ module.exports = NodeHelper.create({
       if (!err) {
         console.log("[ASSTNT] Speak: ", text)
         this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED'})
+        if (this.pause.size > 0) {
+          this.sendSocketNotification('PAUSED')
+        }
       } else {
         console.log("[ASSTNT] Speak Error", err)
       }
@@ -150,6 +162,7 @@ module.exports = NodeHelper.create({
         this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED'})
       }
     })
+    if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
   },
 
   activateHotword: function() {
@@ -168,7 +181,22 @@ module.exports = NodeHelper.create({
       models: models,
       audioGain: 2.0
     })
-    detector.on('error', function (err) {
+    detector.on('silence', ()=>{
+      if (this.pause.size > 0) {
+        record.stop()
+        this.sendSocketNotification('PAUSED')
+        return
+      }
+    })
+    detector.on('sound', (buffer)=>{
+      if (this.pause.size > 0) {
+        record.stop()
+        this.sendSocketNotification('PAUSED')
+        return
+      }
+    })
+
+    detector.on('error', (err)=>{
       console.log('[ASSTNT] Detector Error', err)
       record.stop()
       this.sendSocketNotification('ERROR', 'DETECTOR')
@@ -180,6 +208,7 @@ module.exports = NodeHelper.create({
       new Sound(path.resolve(__dirname, 'resources/dong.wav')).play()
       this.sendSocketNotification('HOTWORD_DETECTED', hotword)
       this.sendSocketNotification('MODE', {mode:'HOTWORD_DETECTED'})
+      if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
       return
     })
 
@@ -233,6 +262,12 @@ module.exports = NodeHelper.create({
             }
         })
         .on('ended', (error, continueConversation) => {
+          if (this.pause.size > 0) {
+            record.stop()
+            speaker.end()
+            this.sendSocketNotification('PAUSED')
+            return
+          }
           if (error) {
             console.log('[ASSTNT] Conversation Ended Error:', error)
             this.sendSocketNotification('ERROR', 'CONVERSATION ENDED')
@@ -305,15 +340,24 @@ module.exports = NodeHelper.create({
       .on('data', (data) => {
         this.sendSocketNotification('MODE', {mode:'COMMAND_LISTENED'})
         if ((data.results[0] && data.results[0].alternatives[0])) {
+	
           console.log(
             "[ASSTNT] Command recognized:",
             data.results[0].alternatives[0].transcript
           )
+
+	  data.results[0].alternatives.forEach((a)=>{
+	    console.log("alt:", a.transcript)
+	  })
           this.sendSocketNotification(
             'COMMAND',
             data.results[0].alternatives[0].transcript
           )
           record.stop()
+        }
+        if (this.pause.size > 0) {
+          record.stop()
+          this.sendSocketNotification('PAUSED')
         }
       })
 
