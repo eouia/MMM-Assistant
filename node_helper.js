@@ -81,7 +81,7 @@ module.exports = NodeHelper.create({
       case 'SPEAK':
         if (this.status !== 'ACTIVATE_SPEAK') {
           this.status = 'ACTIVATE_SPEAK'
-          if(this.pause.size == 0) this.activateSpeak(payload)
+          if(this.pause.size == 0) this.activateSpeak(payload.text, payload.option)
         }
         break
       case 'REBOOT':
@@ -103,8 +103,9 @@ module.exports = NodeHelper.create({
     this.sendSocketNotification('COMMAND', test)
   },
 
-  activateSpeak: function(text) {
-
+  activateSpeak: function(text, option) {
+    option.language = (option.language) ? option.language : this.config.speak.language
+    option.useAlert = (option.useAlert) ? option.useAlert : this.config.speak.useAlert
     var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
 
     function getTmpFile() {
@@ -114,6 +115,11 @@ module.exports = NodeHelper.create({
     }
 
     function say(text, lang, cb) {
+      text = text.trim()
+      text = text.replace(/<[^>]*>/g, "")
+      text = text.replace(/\"/g, "'")
+      text = text.trim()
+
     	var file = getTmpFile(),
     		command = commandTmpl.replace('{{lang}}', lang).replace('{{text}}', text).replace(/\{\{file\}\}/g, file)
     	  exec(command, function(err) {
@@ -122,15 +128,11 @@ module.exports = NodeHelper.create({
     	})
     }
 
-    text = text.trim()
-    text = text.replace(/<[^>]*>/g, "")
-    text = text.replace(/\"/g, "'")
-    text = text.trim()
-    this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED'})
-    say(text, this.config.speak.language, (err) => {
+    this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED', notification:option.useAlert, text:text})
+    say(text, option.language, (err) => {
       if (!err) {
         console.log("[ASSTNT] Speak: ", text)
-        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED'})
+        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED', notification:option.useAlert})
         if (this.pause.size > 0) {
           this.sendSocketNotification('PAUSED')
         }
@@ -140,6 +142,7 @@ module.exports = NodeHelper.create({
     })
   },
 
+  /*
   activateSpeak_espeak: function(text) {
     //@DEPRECATED
     this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED'})
@@ -164,7 +167,7 @@ module.exports = NodeHelper.create({
     })
     if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
   },
-
+  */
   activateHotword: function() {
     console.log('[ASSTNT] Snowboy Activated')
     this.sendSocketNotification('MODE', {mode:'HOTWORD_STARTED'})
@@ -340,7 +343,7 @@ module.exports = NodeHelper.create({
       .on('data', (data) => {
         this.sendSocketNotification('MODE', {mode:'COMMAND_LISTENED'})
         if ((data.results[0] && data.results[0].alternatives[0])) {
-	
+
           console.log(
             "[ASSTNT] Command recognized:",
             data.results[0].alternatives[0].transcript

@@ -60,6 +60,7 @@ Module.register("MMM-Assistant", {
       recordProgram: 'arecord',
       silence: 2.0
     },
+    /*
     speech: {
       auth: [{
         projectId: '', //ProjectId from Google Console
@@ -71,7 +72,9 @@ Module.register("MMM-Assistant", {
         languageCode: 'en-US' //See https://cloud.google.com/speech/docs/languages
       },
     },
+    */
     speak: {
+      useAlert: true,
       language: 'en-US',
     },
     alias: [
@@ -383,13 +386,6 @@ Module.register("MMM-Assistant", {
         this.sendSocketNotification('HOTWORD_STANDBY')
         //this.sendSocketNotification('TEST', 'say Hi, nice to meet you.')
         break;
-      /*
-      case 'ASSTNT_TELL_ADMIN':
-        if (typeof payload == 'string') {
-          //@TODO Speak payload!
-        }
-        break;
-      */
     }
 
   },
@@ -528,12 +524,13 @@ Module.register("MMM-Assistant", {
         response: this.response.bind(this)
       }
       var handler = new AssistantHandler(msg, null, callbacks)
-      handler.response(this.translate("INVALID_COMMAND"), msgText)
+      handler.response(this.translate("INVALID_COMMAND"), msgText, option)
     }
     //cb("HOTWORD_STANDBY")
   },
 
-  response: function(text, originalCommand) {
+  response: function(text, originalCommand, option) {
+    /*
     if (this.config.system.useAlertOnCommandResult) {
       var html = "<p class='yourcommand mdi mdi-voice'> \"" + originalCommand + "\"</p>"
       html += "<div class='answer'>" + text + "</div>"
@@ -547,21 +544,10 @@ Module.register("MMM-Assistant", {
         }
       )
     }
-
-    this.sendSocketNotification('SPEAK', text)
+    */
+    this.sendSocketNotification('SPEAK', text, option)
     this.status = 'SPEAK'
   },
-  /*
-  reply: function(text) {
-    this.response(text)
-  },
-  ask: function(text) {
-    this.response(text)
-  },
-  say: function(text) {
-    this.response(text)
-  },
-  */
 
   loadCSS: function() {
     var css = [
@@ -631,8 +617,8 @@ function AssistantHandler (message, args, callbacks) {
   this.callbacks = callbacks
 }
 
-AssistantHandler.prototype.response = function(text) {
-  this.callbacks.response(text, this.message)
+AssistantHandler.prototype.response = function(text, opts) {
+  this.callbacks.response(text, this.message, opts)
 }
 
 AssistantHandler.prototype.say = function(type, text, opts) {
@@ -641,7 +627,7 @@ AssistantHandler.prototype.say = function(type, text, opts) {
   if (type == 'TEXT') {
     msg = text
   }
-  this.response(msg)
+  this.response(msg, opts)
 }
 
 AssistantHandler.prototype.reply = function(type, text, opts) {
@@ -652,7 +638,7 @@ AssistantHandler.prototype.reply = function(type, text, opts) {
 AssistantHandler.prototype.ask = function(type, text, opts) {
   //for compatibility with MMM-TelegramBot
   var msg = "INVALID_FORMAT"
-  this.response(msg)
+  this.response(msg, opts)
 }
 
 class ASTMessage {
