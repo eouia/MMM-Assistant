@@ -38,7 +38,7 @@ module.exports = NodeHelper.create({
     }
 
 
-    this.sendSocketNotification('MODE', {mode:"INITILIZED"})
+    this.sendSocketNotification('MODE', {mode:"INITIALIZED"})
   },
 
   socketNotificationReceived: function (notification, payload) {
