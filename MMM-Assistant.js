@@ -24,6 +24,12 @@ if (String.prototype.toRegExp !== 'undefined') {
 
 Module.register("MMM-Assistant", {
   defaults: {
+    system: {
+      useAlertOnCommandResult : true,
+      readAlert : true,
+      commandRecognition: 'google-cloud-speech', //'google-assistant'
+      commandSpeak: 'pico', //google-translate
+    },
     assistant: {
       auth: {
         keyFilePath: "secret.json",
@@ -54,22 +60,28 @@ Module.register("MMM-Assistant", {
       recordProgram: 'arecord',
       silence: 2.0
     },
+    /*
     speech: {
-      auth: {
+      auth: [{
         projectId: '', //ProjectId from Google Console
         keyFilename: ''
-      },
+      }],
       request: {
         encoding: 'LINEAR16',
         sampleRateHertz: 16000,
         languageCode: 'en-US' //See https://cloud.google.com/speech/docs/languages
       },
     },
-    espeak: {
-      language: 'en+f4',
-      speed: 140,
-      ssml: true
-    }
+    */
+    speak: {
+      useAlert: true,
+      language: 'en-US',
+    },
+    alias: [
+      {
+        "help :command" : ["teach me :command", "what is :command"]
+      }
+    ]
   },
 
   start: function() {
@@ -85,30 +97,176 @@ Module.register("MMM-Assistant", {
     this.sendSocketNotification('CONFIG', this.config)
   },
 
+  getTranslations: function() {
+    return {
+      en: "translations/en.json",
+    }
+  },
+
   getStyles: function () {
     return ["MMM-Assistant.css","font-awesome.css"]
   },
 
-  getCommands : function(register) {
-    if (register instanceof TelegramBotCommandRegister) {
-      register.add({
-        command: 'ga',
+  getCommands : function(Register) {
+    if (Register.constructor.name == 'TelegramBotCommandRegister') {
+      /*
+      Register.add({
+        command: this.translate("ga"),
         description: 'Send text to Google Assistant.',
         callback: 'cmd_telbot_ga'
       })
+      */
     }
-    if (register instanceof AssistantCommandRegister) {
-      register.add({
-        command: 'list all commands',
-        description: 'list what commands are available.',
-        callback: 'cmd_asstnt_list_commands'
+    if (Register.constructor.name == 'AssistantCommandRegister') {
+      var commands = [
+        {
+          command: this.translate("CMD_HELP"),
+          callback : 'cmd_asstnt_help',
+          description : this.translate("CMD_HELP_DESCRIPTION"),
+        },
+        {
+          command: this.translate("CMD_LIST_COMMANDS"),
+          description: this.translate("CMD_LIST_COMMANDS_DESCRIPTION"),
+          callback : 'cmd_asstnt_list_commands'
+        },
+        {
+          command: this.translate("CMD_LIST_MODULES"),
+          description: this.translate("CMD_LIST_MODULES_DESCRIPTION"),
+          callback : 'cmd_asstnt_list_modules'
+        },
+        {
+          command: this.translate("CMD_HIDE_ALL_MODULES"),
+          description : this.translate("CMD_HIDE_ALL_MODULES_DESCRIPTION"),
+          callback : 'cmd_asstnt_hideall',
+        },
+        {
+          command: this.translate("CMD_SHOW_ALL_MODULES"),
+          description : this.translate("CMD_SHOW_ALL_MODULES_DESCRIPTION"),
+          callback : 'cmd_asstnt_showall',
+        },
+        {
+          command: this.translate("CMD_SAY"),
+          description : this.translate("CMD_SAY_DESCRIPTION"),
+          callback : 'cmd_asstnt_say',
+        },
+        {
+          command: this.translate("CMD_SHUTDOWN"),
+          description : this.translate("CMD_SHUTDOWN_DESCRIPTION"),
+          callback : 'cmd_asstnt_shutdown',
+        },
+        {
+          command: this.translate("CMD_REBOOT"),
+          description : this.translate("CMD_REBOOT_DESCRIPTION"),
+          callback : 'cmd_asstnt_reboot',
+        },
+      ]
+      commands.forEach((c) => {
+        Register.add(c)
       })
     }
   },
 
+  cmd_asstnt_reboot : function (command, handler) {
+    var text = ""
+    this.sendSocketNotification('REBOOT')
+  },
+
+  cmd_asstnt_shutdown : function (command, handler) {
+    var text = ""
+    this.sendSocketNotification('SHUTDOWN')
+  },
+
+  cmd_asstnt_say : function (command, handler) {
+    handler.response(handler.args.something)
+  },
+
+  cmd_asstnt_hideall : function (command, handler) {
+    var text = this.translate("CMD_HIDE_ALL_MODULES_RESULT")
+    var lockString = this.name
+    MM.getModules().enumerate((m)=> {
+      m.hide(0, {lockString:lockString})
+    })
+    handler.response(text)
+  },
+
+  cmd_asstnt_showall : function (command, handler) {
+    var text = this.translate("CMD_SHOW_ALL_MODULES_RESULT")
+    var lockString = this.name
+    MM.getModules().enumerate((m)=> {
+      m.show(0, {lockString:lockString})
+    })
+    handler.response(text)
+  },
+
+  /*
+  cmd_telbot_ga : function (command, handler) {
+    if(handler.constructor.name == 'TelegramBotMessageHandler') {
+      this.sendSocketNotification("ASSITANT_TEXT", handler.args)
+      handler.reply("TEXT", "I will response on Mirror.")
+    }
+  },
+  */
+
+  cmd_asstnt_list_commands : function (command, handler) {
+    var text = this.translate("CMD_LIST_COMMANDS_RESULT") + "<br>"
+
+    var commands = ""
+    this.commands.forEach((c) => {
+      if (commands) {
+        commands += ", "
+      }
+      var tx = c.command.replace(
+        /(\:\S+)/g,
+        (x) => {return "<i class='args'>" + x.replace(":", "") + "</i>"}
+      )
+      commands += ("<b class='command'>\"" + tx + "\"</b>")
+    })
+    text = text + commands + "."
+
+    handler.response(text)
+  },
+
+  cmd_asstnt_list_modules : function (command, handler) {
+    var text = ""
+    MM.getModules().enumerate((m)=>{
+      if (text !== "") {
+        text += ', '
+      }
+      var hidden = ((m.hidden) ? "hidden" : "showing")
+      text += ("<b class='module " + hidden + "'>" + m.name + "</b>")
+
+    })
+    text = this.translate("CMD_LIST_MODULES_RESULT") + "<br>" + text
+    handler.response(text)
+  },
+
+  cmd_asstnt_help: function (command, handler) {
+    var target
+    var text = ""
+    if (handler.args !== null) {
+      target = handler.args['command']
+      this.commands.forEach((c)=>{
+        var tc = c.command.replace(/\:\S+/g, "").trim()
+        if (tc == target) {
+          text += (c.description) ? c.description : ""
+          text += "<br>"
+          text += (
+            (c.moduleName)
+              ? (this.translate("CMD_HELP_COMMAND_PROVIDER", {"module":c.moduleName}))
+              : ""
+          )
+        }
+      })
+    }
+    if (!text) {
+      text = this.translate("CMD_HELP_COMMAND_EXAMPLE")
+    }
+    handler.response(text)
+  },
+
   registerCommand: function(module, commandObj) {
     var c = commandObj
-    var command = c.command
+    var command = c.command.replace(/\([^\s]*\)/g, "")
     var moduleName = module.name
 
     var callback = ((c.callback) ? (c.callback) : 'notificationReceived')
@@ -130,42 +288,87 @@ Module.register("MMM-Assistant", {
     if (isNameUsed == 1) return false
     var cObj = {
       command : command,
-      execute : c.command.toLowerCase(),
+      execute : c.command,
       moduleName : module.name,
       module : module,
       description: c.description,
       callback : callback,
-      argsPattern : c.args_pattern,
-      argsMapping : c.args_mapping,
     }
     this.commands.push(cObj)
+
+    if (this.config.alias[command]) {
+      var alias = this.config.alias[command]
+      alias.forEach((ac)=>{
+        var cObj = {
+          command : ac.replace(/\([^\s]*\)/g, ""),
+          execute : ac,
+          moduleName : module.name,
+          module : module,
+          description: c.description + this.translate("ALIAS", {"command":command}),
+          callback : callback,
+        }
+        this.commands.push(cObj)
+      })
+    }
     return true
   },
 
   getDom : function() {
     var wrapper = document.createElement("div")
     wrapper.className = "ASSTNT"
-    var statusDom = document.createElement("div")
-    statusDom.className = "status " + this.status
-    statusDom.innerHTML = "<i class=\"fa fa-microphone fa-spin fa-2x\">"+ this.status + "</i>"
-    wrapper.appendChild(statusDom)
+    var iconDom = document.createElement("div")
+    iconDom.className = "mdi status " + this.status + " "
+    switch(this.status) {
+      case 'INITIALIZED':
+        iconDom.className += "mdi-microphone-outline"
+        break
+      case 'HOTWORD_STARTED':
+        iconDom.className += "mdi-microphone"
+        break
+      case 'HOTWORD_DETECTED':
+        iconDom.className += "mdi-microphone"
+        break
+      case 'ASSISTANT_STARTED':
+        iconDom.className += "mdi-google-assistant"
+        break
+      case 'ASSISTANT_SPEAKING':
+        iconDom.className += "mdi-google-assistant"
+        break
+      case 'COMMAND_STARTED':
+        iconDom.className += "mdi-apple-keyboard-command"
+        break
+      case 'COMMAND_LISTENED':
+        iconDom.className += "mdi-apple-keyboard-command"
+        break
+      case 'SPEAK_STARTED':
+        iconDom.className += "mdi-message-processing"
+        break
+      case 'SPEAK_ENDED':
+        iconDom.className += "mdi-microphone"
+        break
+    }
+
+    iconDom.innerHTML = ""
+    wrapper.appendChild(iconDom)
     return wrapper
   },
 
-  getStyles: function () {
-    return ["MMM-Assistant.css"]
-  },
-
-  notificationReceived: function (notification, payload) {
+  notificationReceived: function (notification, payload, sender) {
     switch(notification) {
+      case 'ASSISTANT_REQUEST_PAUSE':
+        this.sendSocketNotification('PAUSE', sender.name)
+        break
+      case 'ASSISTANT_REQUEST_RESUME':
+        this.sendSocketNotification('RESUME', sender.name)
+        break
       case 'ALL_MODULES_STARTED':
         if (this.isAlreadyInitialized) {
           return
         }
         this.isAlreadyInitialized = 1
+        this.loadCSS()
         var commands = []
         MM.getModules().enumerate((m) => {
-          console.log('getCommands', m.name)
           if (m.name !== 'MMM-Assistant') {
             if (typeof m.getCommands == 'function') {
               var tc = m.getCommands(new AssistantCommandRegister(
@@ -180,11 +383,8 @@ Module.register("MMM-Assistant", {
             }
           }
         })
-        break;
-      case 'ASSTNT_TELL_ADMIN':
-        if (typeof payload == 'string') {
-          //@TODO Speak payload!
-        }
+        this.sendSocketNotification('HOTWORD_STANDBY')
+        //this.sendSocketNotification('TEST', 'say Hi, nice to meet you.')
         break;
     }
 
@@ -193,6 +393,16 @@ Module.register("MMM-Assistant", {
   // socketNotificationReceived from helper
   socketNotificationReceived: function (notification, payload) {
     switch(notification) {
+      case 'PAUSED':
+        this.status == 'PAUSED'
+        this.updateDom()
+        this.sendNotification('ASSISTANT_PAUSED')
+        break;
+      case 'RESUMED':
+        this.status == 'HOTWORD_STANDBY'
+        this.sendSocketNotification("HOTWORD_STANDBY")
+        this.sendNotification('ASSISTANT_RESUMED')
+        break;
       case 'HOTWORD_DETECTED':
         this.status = "HOTWORD_DETECTED"
         console.log("[ASSTNT] Hotword detected:", payload)
@@ -200,7 +410,6 @@ Module.register("MMM-Assistant", {
         break
       case 'READY':
         this.status = "HOTWORD_STANDBY"
-        console.log("[ASSTNT] Hotword detection standby")
         this.sendSocketNotification("HOTWORD_STANDBY")
         break
       case 'HOTWORD_STANDBY':
@@ -209,9 +418,10 @@ Module.register("MMM-Assistant", {
         this.sendSocketNotification("HOTWORD_STANDBY")
         break
       case 'ASSISTANT_FINISHED':
-        this.status = "HOTWORD_STANDBY";
-        console.log("[ASSTNT] Hotword detection standby")
-        this.sendSocketNotification("HOTWORD_STANDBY")
+        if (payload == 'ASSISTANT') {
+          this.status = "HOTWORD_STANDBY";
+          this.sendSocketNotification("HOTWORD_STANDBY")
+        }
         break
       case 'COMMAND':
         this.status = "COMMAND";
@@ -222,47 +432,30 @@ Module.register("MMM-Assistant", {
       case 'ERROR':
         this.status = "ERROR"
         console.log("[ASSTNT] Error:", payload)
-        this.sendSocketNotification("HOTWORD_STANDBY")
-      case 'ACTIVE_ASSISTANT':
-        this.status = 'ACTIVE_ASSISTANT',
+        //this.sendSocketNotification("HOTWORD_STANDBY")
+        break
+      case 'MODE':
+        this.status = payload.mode
+        if (payload.mode == 'SPEAK_ENDED') {
+          this.sendNotification("HIDE_ALERT");
+          this.sendSocketNotification("HOTWORD_STANDBY")
+        }
         this.updateDom()
     }
-    this.updateDom()
   },
 
-  cmd_telbot_ga : function (command, handler) {
-    if(handler instanceof TelegramBotMessageHandler) {
-      this.sendSocketNotification("ASSITANT_TEXT", handler.args)
-      handler.reply("TEXT", "I will response on Mirror.")
-    }
-  },
 
-  cmd_asstnt_list_commands : function (command, handler) {
-    var text = "These are available commands.<br>"
-
-    this.commands.forEach((c) => {
-      text += ("<b>[" + c.command + "]</b>, ")
-    })
-    this.sendNotification('SHOW_ALERT', {
-      timer:30000,
-      title:"[MMM-Assistant]",
-      message:text
-    })
-    if(handler instanceof AssistantHandler) {
-      handler.response(text)
-    }
-  },
 
   hotwordDetected : function (type) {
+
     if (type == 'ASSISTANT') {
       this.sendSocketNotification('ACTIVATE_ASSISTANT')
       this.status = 'ACTIVATE_ASSISTANT'
-      this.updateDom()
     } else if (type == 'MIRROR') {
       this.sendSocketNotification('ACTIVATE_COMMAND')
       this.status = 'ACTIVATE_COMMAND'
-      this.updateDom()
     }
+
   },
 
   parseCommand: function(msg, cb) {
@@ -273,89 +466,109 @@ Module.register("MMM-Assistant", {
       return
     }
     var msgText = msg
+    var commandFound = 0
+    var c
     for(var i in this.commands) {
-      var c = this.commands[i]
-      var matched = msgText.match(new RegExp(("/^" + c.execute + "/").toRegExp()))
-      if (matched) {
-        if (c.argsPattern && Array.isArray(c.argsPattern)) {
-          args = []
-          for(var j = 0; j < c.argsPattern.length; j++) {
-            var p = c.argsPattern[j]
-            if (p instanceof RegExp) {
-              //do nothing.
-            } else {
-              if (typeof p == 'string') {
-                p = p.toRegExp()
-              } else {
-                p = /.*/
-              }
-            }
-            console.log("match", p, msgText)
-            var result = p.exec(msgText.trim())
-            console.log("result", result)
-            if (c.argsMapping && Array.isArray(c.argsMapping)) {
-              if (typeof c.argsMapping[j] !== 'undefined') {
-                if (result && result.length == 1) {
-                  args[c.argsMapping[j]] = result[0]
-                } else {
-                  args[c.argsMapping[j]] = result
-                }
-              } else {
-                if (result && result.length == 1) {
-                  args.push(result[0])
-                } else {
-                  args.push(result)
-                }
-              }
-            } else {
-              if (result && result.length == 1) {
-                args.push(result[0])
-              } else {
-                args.push(result)
-              }
-            }
-          }
-        } else {
-          args = msgText
-        }
-        console.log("args", args)
-        if (c.callback !== 'notificationReceived') {
-          var callbacks = {
-            response: this.response.bind(this)
-          }
-          var handler = new AssistantHandler(msg, args, callbacks)
-          c.module[c.callback].bind(c.module)
-          c.module[c.callback](c.execute, handler)
-        } else {
-          c.module[c.callback].bind(c.module)
-          c.module[c.callback](c.execute, args)
-        }
-        break
+      c = this.commands[i]
+      var commandPattern = c.execute
+      // :args or :args(pattern)
+      var argsPattern = /\:([^\(\s]+)(\(\S+\))?/g
+      var hasArgs = commandPattern.match(argsPattern)
+      var argsGroup = []
+      var args = []
+      if (hasArgs) {
+        var ta = []
+        hasArgs.forEach((arg)=>{
+          var argPattern = /\:([^\(\s]+)(\(\S+\))?/g
+          var ma = argPattern.exec(arg)
+          var pattern = {}
+          pattern.origin = ma[0]
+          pattern.pattern = (ma[2]) ? ma[2] : "(.*)"
+          ta.push(pattern)
+          argsGroup.push(ma[1])
+        })
+        ta.forEach((arg)=>{
+          commandPattern = commandPattern.replace(arg.origin, arg.pattern)
+        })
+      } else { // command has no args pattern
+        argsGroup = []
+      }
+      var matched = ("^" + commandPattern).toRegExp().exec(msgText)
 
-      } else {
+      if (matched) {
+        commandFound = 1
+        if (argsGroup) {
+          for(var j=0; j<argsGroup.length ;j++) {
+            args[argsGroup[j]] = matched[j+1]
+          }
+        }
+      }
+      if (commandFound == 1) {
+        break
+      }
+    }
+    if (commandFound == 1) {
+      if (c.callback !== 'notificationReceived') {
         var callbacks = {
           response: this.response.bind(this)
         }
-        var handler = new AssistantHandler(msg, null, callbacks)
-        handler.response(this.translate("ASSTNT_NOT_REGISTERED_COMMAND"))
+        var handler = new AssistantHandler(msg, args, callbacks)
+        c.module[c.callback].bind(c.module)
+        c.module[c.callback](c.execute, handler)
+      } else {
+        c.module[c.callback].bind(c.module)
+        c.module[c.callback](c.execute, args)
       }
+    } else {
+      var callbacks = {
+        response: this.response.bind(this)
+      }
+      var handler = new AssistantHandler(msg, null, callbacks)
+      handler.response(this.translate("INVALID_COMMAND"), msgText, option)
     }
-    cb("HOTWORD_STANDBY")
+    //cb("HOTWORD_STANDBY")
   },
 
-  response: function(text) {
-    this.sendSocketNotification('SPEAK', text)
+  response: function(text, originalCommand, option) {
+    /*
+    if (this.config.system.useAlertOnCommandResult) {
+      var html = "<p class='yourcommand mdi mdi-voice'> \"" + originalCommand + "\"</p>"
+      html += "<div class='answer'>" + text + "</div>"
+      this.sendNotification(
+        'SHOW_ALERT',
+        {
+          title: "[MMM-Assistant]",
+          message: html,
+          imageFA: "microphone",
+          timer: 120000,
+        }
+      )
+    }
+    */
+    this.sendSocketNotification('SPEAK', text, option)
     this.status = 'SPEAK'
-    this.updateDom()
   },
-  reply: function(text) {
-    this.response(text)
-  },
-  ask: function(text) {
-    this.response(text)
-  },
-  say: function(text) {
-    this.response(text)
+
+  loadCSS: function() {
+    var css = [
+      {
+        id:'materialDesignIcons',
+        href: 'https://cdn.materialdesignicons.com/2.0.46/css/materialdesignicons.min.css',
+      },
+    ]
+    css.forEach(function(c) {
+      if (!document.getElementById(c.id))
+      {
+        var head  = document.getElementsByTagName('head')[0]
+        var link  = document.createElement('link')
+        link.id   = c.id
+        link.rel  = 'stylesheet'
+        link.type = 'text/css'
+        link.href = c.href
+        link.media = 'all'
+        head.appendChild(link)
+      }
+    })
   },
 
   configAssignment : function (result) {
@@ -404,17 +617,17 @@ function AssistantHandler (message, args, callbacks) {
   this.callbacks = callbacks
 }
 
-AssistantHandler.prototype.response = function(text) {
-  this.callbacks.response(text)
+AssistantHandler.prototype.response = function(text, opts) {
+  this.callbacks.response(text, this.message, opts)
 }
 
 AssistantHandler.prototype.say = function(type, text, opts) {
   //for compatibility with MMM-TelegramBot
-  var msg = "Sorry, I cannot pronounce this response."
+  var msg = "UNSPEAKABLE"
   if (type == 'TEXT') {
     msg = text
   }
-  this.response(msg)
+  this.response(msg, opts)
 }
 
 AssistantHandler.prototype.reply = function(type, text, opts) {
@@ -424,8 +637,8 @@ AssistantHandler.prototype.reply = function(type, text, opts) {
 
 AssistantHandler.prototype.ask = function(type, text, opts) {
   //for compatibility with MMM-TelegramBot
-  var msg = "Sorry, the question and answer based dialog is not supported in command mode. Please ask module developer."
-  this.response(msg)
+  var msg = "INVALID_FORMAT"
+  this.response(msg, opts)
 }
 
 class ASTMessage {
