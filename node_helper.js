@@ -346,15 +346,10 @@ module.exports = NodeHelper.create({
       .on('data', (data) => {
         this.sendSocketNotification('MODE', {mode:'COMMAND_LISTENED'})
         if ((data.results[0] && data.results[0].alternatives[0])) {
-
           console.log(
             "[ASSTNT] Command recognized:",
             data.results[0].alternatives[0].transcript
           )
-
-	  data.results[0].alternatives.forEach((a)=>{
-	    console.log("alt:", a.transcript)
-	  })
           this.sendSocketNotification(
             'COMMAND',
             data.results[0].alternatives[0].transcript

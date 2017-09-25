@@ -524,7 +524,6 @@ Module.register("MMM-Assistant", {
   },
 
   response: function(text, originalCommand, option) {
-    console.log(originalCommand, text, option)
     this.sendSocketNotification('SPEAK', {text:text, option:option, originalCommand:originalCommand})
     this.status = 'SPEAK'
   },
