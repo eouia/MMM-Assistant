@@ -25,10 +25,9 @@ if (String.prototype.toRegExp !== 'undefined') {
 Module.register("MMM-Assistant", {
   defaults: {
     system: {
-      useAlertOnCommandResult : true,
-      readAlert : true,
-      commandRecognition: 'google-cloud-speech', //'google-assistant'
-      commandSpeak: 'pico', //google-translate
+      readAlert : true, // reserved for later
+      commandRecognition: 'google-cloud-speech', //'google-assistant' (reserved for later)
+      commandSpeak: 'pico', //google-translate (reserved for later)
     },
     assistant: {
       auth: {
@@ -60,8 +59,7 @@ Module.register("MMM-Assistant", {
       recordProgram: 'arecord',
       silence: 2.0
     },
-    /*
-    speech: {
+    stt: {
       auth: [{
         projectId: '', //ProjectId from Google Console
         keyFilename: ''
@@ -72,7 +70,6 @@ Module.register("MMM-Assistant", {
         languageCode: 'en-US' //See https://cloud.google.com/speech/docs/languages
       },
     },
-    */
     speak: {
       useAlert: true,
       language: 'en-US',
@@ -109,13 +106,7 @@ Module.register("MMM-Assistant", {
 
   getCommands : function(Register) {
     if (Register.constructor.name == 'TelegramBotCommandRegister') {
-      /*
-      Register.add({
-        command: this.translate("ga"),
-        description: 'Send text to Google Assistant.',
-        callback: 'cmd_telbot_ga'
-      })
-      */
+      //do nothing
     }
     if (Register.constructor.name == 'AssistantCommandRegister') {
       var commands = [
@@ -198,18 +189,8 @@ Module.register("MMM-Assistant", {
     handler.response(text)
   },
 
-  /*
-  cmd_telbot_ga : function (command, handler) {
-    if(handler.constructor.name == 'TelegramBotMessageHandler') {
-      this.sendSocketNotification("ASSITANT_TEXT", handler.args)
-      handler.reply("TEXT", "I will response on Mirror.")
-    }
-  },
-  */
-
   cmd_asstnt_list_commands : function (command, handler) {
     var text = this.translate("CMD_LIST_COMMANDS_RESULT") + "<br>"
-
     var commands = ""
     this.commands.forEach((c) => {
       if (commands) {
@@ -384,13 +365,10 @@ Module.register("MMM-Assistant", {
           }
         })
         this.sendSocketNotification('HOTWORD_STANDBY')
-        //this.sendSocketNotification('TEST', 'say Hi, nice to meet you.')
         break;
     }
-
   },
 
-  // socketNotificationReceived from helper
   socketNotificationReceived: function (notification, payload) {
     switch(notification) {
       case 'PAUSED':
@@ -439,6 +417,22 @@ Module.register("MMM-Assistant", {
         if (payload.mode == 'SPEAK_ENDED') {
           this.sendNotification("HIDE_ALERT");
           this.sendSocketNotification("HOTWORD_STANDBY")
+        }
+
+        if (payload.mode == 'SPEAK_STARTED') {
+          if (payload.useAlert) {
+            var html = "<p class='yourcommand mdi mdi-voice'> \"" + payload.originalCommand + "\"</p>"
+            html += "<div class='answer'>" + payload.text + "</div>"
+            this.sendNotification(
+              'SHOW_ALERT',
+              {
+                title: "[MMM-Assistant]",
+                message: html,
+                imageFA: "microphone",
+                timer: 120000,
+              }
+            )
+          }
         }
         this.updateDom()
     }
@@ -524,28 +518,14 @@ Module.register("MMM-Assistant", {
         response: this.response.bind(this)
       }
       var handler = new AssistantHandler(msg, null, callbacks)
-      handler.response(this.translate("INVALID_COMMAND"), msgText, option)
+      handler.response(this.translate("INVALID_COMMAND"), msgText)
     }
     //cb("HOTWORD_STANDBY")
   },
 
   response: function(text, originalCommand, option) {
-    /*
-    if (this.config.system.useAlertOnCommandResult) {
-      var html = "<p class='yourcommand mdi mdi-voice'> \"" + originalCommand + "\"</p>"
-      html += "<div class='answer'>" + text + "</div>"
-      this.sendNotification(
-        'SHOW_ALERT',
-        {
-          title: "[MMM-Assistant]",
-          message: html,
-          imageFA: "microphone",
-          timer: 120000,
-        }
-      )
-    }
-    */
-    this.sendSocketNotification('SPEAK', text, option)
+    console.log(originalCommand, text, option)
+    this.sendSocketNotification('SPEAK', {text:text, option:option, originalCommand:originalCommand})
     this.status = 'SPEAK'
   },
 

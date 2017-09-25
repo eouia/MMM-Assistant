@@ -31,10 +31,10 @@ module.exports = NodeHelper.create({
     this.config.assistant.auth.savedTokensPath
       = path.resolve(__dirname, this.config.assistant.auth.savedTokensPath)
 
-    this.commandAuthMax = this.config.speech.auth.length
+    this.commandAuthMax = this.config.stt.auth.length
     for(var i=0; i<this.commandAuthMax; i++) {
-      this.config.speech.auth[i].keyFilename
-        = path.resolve(__dirname, this.config.speech.auth[i].keyFilename)
+      this.config.stt.auth[i].keyFilename
+        = path.resolve(__dirname, this.config.stt.auth[i].keyFilename)
     }
 
 
@@ -81,7 +81,8 @@ module.exports = NodeHelper.create({
       case 'SPEAK':
         if (this.status !== 'ACTIVATE_SPEAK') {
           this.status = 'ACTIVATE_SPEAK'
-          if(this.pause.size == 0) this.activateSpeak(payload.text, payload.option)
+          console.log(payload)
+          if(this.pause.size == 0) this.activateSpeak(payload.text, payload.option, payload.originalCommand)
         }
         break
       case 'REBOOT':
@@ -103,9 +104,11 @@ module.exports = NodeHelper.create({
     this.sendSocketNotification('COMMAND', test)
   },
 
-  activateSpeak: function(text, option) {
-    option.language = (option.language) ? option.language : this.config.speak.language
-    option.useAlert = (option.useAlert) ? option.useAlert : this.config.speak.useAlert
+  activateSpeak: function(text, commandOption={}, originalCommand = "") {
+    var option = {}
+    option.language = (typeof commandOption.language !== 'undefined') ? commandOption.language : this.config.speak.language
+    option.useAlert = (typeof commandOption.useAlert !== 'undefined') ? commandOption.useAlert : this.config.speak.useAlert
+    option.originalCommand = (originalCommand) ? originalCommand : ""
     var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
 
     function getTmpFile() {
@@ -115,7 +118,7 @@ module.exports = NodeHelper.create({
     }
 
     function say(text, lang, cb) {
-      text = text.trim()
+      text = (text) ? text.trim() : ""
       text = text.replace(/<[^>]*>/g, "")
       text = text.replace(/\"/g, "'")
       text = text.trim()
@@ -128,11 +131,11 @@ module.exports = NodeHelper.create({
     	})
     }
 
-    this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED', notification:option.useAlert, text:text})
+    this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED', useAlert:option.useAlert, originalCommand:option.originalCommand, text:text})
     say(text, option.language, (err) => {
       if (!err) {
         console.log("[ASSTNT] Speak: ", text)
-        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED', notification:option.useAlert})
+        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED', useAlert:option.useAlert})
         if (this.pause.size > 0) {
           this.sendSocketNotification('PAUSED')
         }
@@ -327,11 +330,11 @@ module.exports = NodeHelper.create({
 
   activateCommand: function() {
     this.sendSocketNotification('MODE', {mode:'COMMAND_STARTED'})
-    const speech = Speech(this.config.speech.auth[this.commandAuthIndex++])
+    const speech = Speech(this.config.stt.auth[this.commandAuthIndex++])
     if (this.commandAuthIndex >= this.commandAuthMax) this.commandAuthIndex = 0
 
     const request = {
-      config: this.config.speech.request,
+      config: this.config.stt.request,
       interimResults: false // If you want interim results, set this to true
     }
     const recognizeStream = speech.streamingRecognize(request)
