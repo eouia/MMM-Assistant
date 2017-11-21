@@ -1,5 +1,5 @@
 {
-  "name": "MMM-TelegramBot",
+  "name": "MMM-Assistant",
   "version": "1.0.0",
   "dependencies": {
     "@google-cloud/speech": "^0.10.3",
