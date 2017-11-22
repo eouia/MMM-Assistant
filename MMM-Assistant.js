@@ -6,7 +6,7 @@
  * By
  * MIT Licensed.
  */
-if (String.prototype.toRegExp !== 'undefined') {
+if (typeof String.prototype.toRegExp !== 'undefined') {
   String.prototype.toRegExp = function() {
     var lastSlash = this.lastIndexOf("/")
     if(lastSlash > 1) {
