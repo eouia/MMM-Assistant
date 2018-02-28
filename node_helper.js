@@ -90,6 +90,18 @@ module.exports = NodeHelper.create({
           console.log(callback)
         })
         break
+      case 'SWITCH_ON':
+        //execute('tvservice --preferred && sudo chvt 6 && sudo chvt 7')
+        execute("vcgencmd display_power 1", function(callback){
+          console.log(callback)
+        })
+        break
+      case 'SWITCH_OFF':
+        execute("vcgencmd display_power 0", function(callback){
+          console.log(callback)
+        })
+       //execute("tvservice -o")
+       break
       case 'SHUTDOWN':
         execute('sudo shutdown -t 1', function(callback){
           console.log(callback)
@@ -225,7 +237,7 @@ module.exports = NodeHelper.create({
     var transcription = ""
     console.log('[ASSTNT] Assistant Activated')
     this.sendSocketNotification('MODE', {mode:'ASSISTANT_STARTED'})
-    const assistant = new GoogleAssistant(this.config.assistant)
+    const assistant = new GoogleAssistant(this.config.assistant.auth)
 
     const startConversation = (conversation) => {
       //console.log('Say something!');
@@ -243,7 +255,7 @@ module.exports = NodeHelper.create({
             speaker.write(data);
             spokenResponseLength += data.length;
             const audioTime
-              = spokenResponseLength / (this.config.assistant.audio.sampleRateOut * 16 / 8) * 1000;
+              = spokenResponseLength / (this.config.assistant.conversation.audio.sampleRateOut * 16 / 8) * 1000;
             clearTimeout(speakerTimer);
             speakerTimer = setTimeout(() => {
               speaker.end();
@@ -303,7 +315,7 @@ module.exports = NodeHelper.create({
       // setup the speaker
       var speaker = new Speaker({
         channels: 1,
-        sampleRate: this.config.assistant.audio.sampleRateOut,
+        sampleRate: this.config.assistant.conversation.audio.sampleRateOut,
       });
       speaker
         .on('open', () => {
@@ -317,7 +329,7 @@ module.exports = NodeHelper.create({
     // setup the assistant
     assistant
       .on('ready', () => {
-        assistant.start()
+        assistant.start(this.config.assistant.conversation)
       })
       .on('started', startConversation)
       .on('error', (error) => {
@@ -374,6 +386,9 @@ module.exports = NodeHelper.create({
   }
 })
 
+
+
 function execute(command, callback){
+  //exec(command, {timeout: 15000}, function(error, stdout, stderr){ console.log(stdout); console.log(stderr); });
   exec(command, function(error, stdout, stderr){ callback(stdout); });
 }
