@@ -4,19 +4,19 @@
 [![DocStatus](https://inch-ci.org/github/eouia/MMM-Assistant.svg?branch=master)](https://inch-ci.org/github/eouia/MMM-Assistant)
 [![GitHub last commit](https://img.shields.io/github/last-commit/eouia/MMM-Assistant.svg)](https://github.com/eouia/MMM-Assistant)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/eouia/MMM-Assistant/graphs/commit-activity)
-
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/eouia/MMM-Assistant.svg)](http://isitmaintained.com/project/eouia/MMM-Assistant "Average time to resolve an issue")
 
 A Voice Commander and Google-Assistant for MagicMirror
 
 | STATUS: | Version | Date | Maintained? |
 |:------- |:------- |:---- |:----------- |
-| Working | `1.0.1` | 2018-03-25 | YES |
+| Working | `1.0.1` | 2018-03-26 | YES |
 
 
 #### What is this module doing?
 
-*MMM-Assistant* is a [MagicMirror](https://github.com/MichMich/MagicMirror) module for using your voice to:  
-1. Control your MM modules
+*MMM-Assistant* is a [MagicMirror](https://github.com/MichMich/MagicMirror) (MM) module for using your voice to:  
+1. control your other *MM* modules
 2. provide *Google Assistant* functionality
 3. provide *Alexa* functionality [**WIP**]
 
@@ -38,6 +38,7 @@ appear a small icon of XXXX or the google "bubbles" like this:
 ### Installation
 
 There are 3 parts to the installation: 
+
 0. Make sure your RPi OS is not too old
 1. Update nodejs and npm
 2. Install the dependencies
@@ -49,11 +50,10 @@ There are 3 parts to the installation:
 The current Raspbian OS version is: `Stretch (9.4)`.
 
 ```bash
-uname -a
-sudo lsb_release -a
-
 sudo apt-get update 
 sudo apt-get upgrade
+uname -a
+sudo lsb_release -a
 ```
 
 
@@ -89,7 +89,7 @@ npm install
 ```
 
 
-:warning: Now go to the [Wiki page](https://github.com/eouia/MMM-Assistant/wiki) and follow all the steps in 
+:red_circle: Now go to the [Wiki page](https://github.com/eouia/MMM-Assistant/wiki) and follow all the steps in 
 `step 3` to create the *Google Assistant* and *Google Cloud Speech* accounts and settings. When done, 
 proceed to the post installation below.
 
@@ -99,10 +99,13 @@ proceed to the post installation below.
 ```bash
 cd ~/MagicMirror/modules/MMM-Assistant/
 npm install --save-dev electron-rebuild 
-./node_modules/.bin/electron-rebuild --pre-gyp-fix
+# Do not use the deprecated: --pre-gyp-fix
+./node_modules/.bin/electron-rebuild
 ```
-This step will take a long time, as it need to manually compile the [gRpc]() dependency. 
-This take about **~25 minutes** on a RPi3. 
+
+This step will take a very long time, as it need to manually compile the [gRPC](https://github.com/grpc/grpc) dependency.
+There is also a *node/npm gprc* [here](https://www.npmjs.com/package/grpc) with a GitHub repo [here](https://github.com/grpc/grpc-node).  
+:warning: This take about **~25 minutes** on a RPi3, with little or no output. Do not interrupt.
 
 
 ---
@@ -203,22 +206,34 @@ You can change this configuration later when you see that it works.
 | reboot | MM | Reboot your RPi | 
 | shut down | MM | Shut down your RPi | 
 
-WIP - More TBA
 
+*WIP - More TBA*
 
 
 ---
 
-### (node) Dependencies
+### Dependencies (Google API keys)
+
+:red_circle: Unfortunately the **Google Speech API is not free**. But it does allow you `60 minutes` for free per month. 
+But every recognition request is considered to last a minimum 15 seconds. So exactly `240 requests` would be available for free. 
+Additional requests will then be charged $0.006 per request, if you have a paid accout. Thereafter, the requests will be blocked. 
+However, if you create an account for the first time, you will be given about $300 USD in credit, to use within 1 year, for free.
+
+Therefore it is very important that we get the Amazon Alexa service implementation going, as they are completely free!
+
+
+### Dependencies (node/npm)
 
 This module depend on the following *npm* packages:
 
-* [@google-cloud/speech() (1.3.0)
-* [google-assistant]() (0.2.2)
-* [node-aplay]() (1.0.3)
-* [node-record-lpcm16]() (0.3.0)
-* [snowboy]() (1.2.0)
-* [speaker]() (0.4.0)
+| npm Package | Version | GitHub |
+|:----------- |:------- |:------ |
+| [@google-cloud/speech](https://www.npmjs.com/package/@google-cloud/speech) | 1.3.0 | [github](https://github.com/googleapis/nodejs-speech) |
+| [google-assistant](https://www.npmjs.com/package/google-assistant) | 0.2.2 | [github](https://github.com/endoplasmic/google-assistant) |
+| [node-aplay](https://www.npmjs.com/package/node-aplay) | 1.0.3 | Deprecated! Use [aplay](https://www.npmjs.com/package/aplay) -  [github](https://github.com/roccomuso/node-aplay) | 
+| [node-record-lpcm16](https://www.npmjs.com/package/node-record-lpcm16) | 0.3.0 | | [github](https://github.com/gillesdemey/node-record-lpcm16) | 
+| [snowboy](https://www.npmjs.com/package/snowboy) | 1.2.0) | [github](https://github.com/Kitt-AI/snowboy) | 
+| [speaker](https://www.npmjs.com/package/speaker) | 0.4.0) | [github](https://github.com/TooTallNate/node-speaker) |
 
 These are also listed in the `package.json` file and should be installed automatically when using *npm install*.
 However, those may require other packages. 
