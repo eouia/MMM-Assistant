@@ -30,14 +30,17 @@ Module.register("MMM-Assistant", {
       commandSpeak: 'pico', //google-translate (reserved for later)
     },
     assistant: {
-      auth: {
-        keyFilePath: "secret.json",
-        savedTokensPath: "resources/tokens.js"
-      },
-      audio: {
-        encodingIn: "LINEAR16",
-        sampleRateOut: 16000
-      }
+        auth: {
+            keyFilePath: "secret.json", //When you want to change the location of this file, set this.
+            savedTokensPath: "resources/tokens.js", //When you want to change the location of this file, set this.
+        },
+        conversation: {
+            lang: 'en-US',
+            audio: {
+                encodingIn: "LINEAR16", //Ignore this. I think you don't need to change this.
+                sampleRateOut: 16000, //Ignore this. I think you don't need to change this.
+            },
+        },
     },
     snowboy: {
       models: [
@@ -97,6 +100,7 @@ Module.register("MMM-Assistant", {
   getTranslations: function() {
     return {
       en: "translations/en.json",
+      fr: "translations/fr.json"
     }
   },
 
@@ -150,6 +154,27 @@ Module.register("MMM-Assistant", {
           description : this.translate("CMD_REBOOT_DESCRIPTION"),
           callback : 'cmd_asstnt_reboot',
         },
+        {
+          command: this.translate("CMD_SWITCH_ON"),
+          description : this.translate("CMD_SWITCH_ON_DESCRIPTION"),
+          callback : 'cmd_asstnt_switch_on',
+        },
+        {
+          command: this.translate("CMD_SWITCH_OFF"),
+          description : this.translate("CMD_SWITCH_OFF_DESCRIPTION"),
+          callback : 'cmd_asstnt_switch_off',
+        },
+        {
+          command: this.translate("CMD_PAGE_INCR"),
+          description : this.translate("CMD_PAGE_INCR_DESCRIPTION"),
+          callback : 'cmd_asstnt_page_incr',
+        },
+        {
+          command: this.translate("CMD_PAGE_DECR"),
+          description : this.translate("CMD_PAGE_DECR_DESCRIPTION"),
+          callback : 'cmd_asstnt_page_decr',
+        },
+
       ]
       commands.forEach((c) => {
         Register.add(c)
@@ -160,6 +185,28 @@ Module.register("MMM-Assistant", {
   cmd_asstnt_reboot : function (command, handler) {
     var text = ""
     this.sendSocketNotification('REBOOT')
+  },
+  cmd_asstnt_page_incr : function (command, handler) {
+    var text = this.translate("CMD_PAGE_INCR_RESULT")
+    this.sendNotification('PAGE_INCREMENT')
+    handler.response(text)
+  },
+  cmd_asstnt_page_decr : function (command, handler) {
+    var text = this.translate("CMD_PAGE_DECR_RESULT")
+    this.sendNotification('PAGE_DECREMENT')
+    handler.response(text)
+  },
+  cmd_asstnt_switch_on : function (command, handler) {
+    var text = this.translate("CMD_SWITCH_ON_RESULT")
+    this.sendSocketNotification('SWITCH_ON')
+    handler.response(text)
+    
+  },
+
+  cmd_asstnt_switch_off : function (command, handler) {
+    var text = this.translate("CMD_SWITCH_OFF_RESULT")
+    this.sendSocketNotification('SWITCH_OFF')
+    handler.response(text)
   },
 
   cmd_asstnt_shutdown : function (command, handler) {
@@ -415,7 +462,7 @@ Module.register("MMM-Assistant", {
       case 'MODE':
         this.status = payload.mode
         if (payload.mode == 'SPEAK_ENDED') {
-          this.sendNotification("HIDE_ALERT");
+          if (payload.useAlert) {this.sendNotification("HIDE_ALERT");}
           this.sendSocketNotification("HOTWORD_STANDBY")
         }
 

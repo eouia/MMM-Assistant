@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "dependencies": {
     "@google-cloud/speech": "0.10.3",
-    "google-assistant": "0.1.12",
+    "google-assistant": "0.2.2",
     "node-aplay": "1.0.3",
     "node-record-lpcm16": "0.3.0",
     "snowboy": "1.2.0",
     "speaker": "0.4.0"
   },
   "devDependencies": {
-    "electron-rebuild": "1.6.0",
+    "electron-rebuild": "^1.7.3",
     "yarg": "1.0.8"
   }
 }
