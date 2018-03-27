@@ -29,13 +29,16 @@ There is not much to see since this is a voice based module. But when the module
 one of your 2 wakewords; **`smart-mirror`** (for MM control) or **`snowboy`** (for GA interaction), there will 
 appear a square-pretzel icon ("⌘") or the Google "bubbles", in the place of the module position, like this:
 
-When in normal `listening` mode:
+When in normal `listening` mode:  
+
 ![Full](./images/Assistant_1.png)
 
-When in Magic Mirror `control` mode:
+When in Magic Mirror `control` mode:  
+
 ![Full](./images/Assistant_MM.png)
 
-When in `Google Assistant` mode:
+When in `Google Assistant` mode:  
+
 ![Full](./images/Assistant_GA.png)
 
 
