@@ -10,15 +10,16 @@ A Voice Commander and Google-Assistant for MagicMirror
 
 | STATUS: | Version | Date | Maintained? |
 |:------- |:------- |:---- |:----------- |
-| Working | `1.0.1` | 2018-03-26 | YES |
+| Working | `1.0.2` | 2018-03-27 | YES |
 
 
 #### What is this module doing?
 
 *MMM-Assistant* is a [MagicMirror](https://github.com/MichMich/MagicMirror) (MM) module for using your voice to:  
-1. control your other *MM* modules
-2. provide *Google Assistant* functionality
-3. provide *Alexa* functionality [**WIP**]
+
+- control your other *MM* modules
+- provide *Google Assistant* functionality
+- provide *Alexa* functionality [**WIP**]
 
 ---
 
@@ -26,12 +27,16 @@ A Voice Commander and Google-Assistant for MagicMirror
 
 There is not much to see since this is a voice based module. But when the module has recognized 
 one of your 2 wakewords; **`smart-mirror`** (for MM control) or **`snowboy`** (for GA interaction), there will 
-appear a small square-pretzel icon of "⌘" or the Google "bubbles" like this:
+appear a square-pretzel icon ("⌘") or the Google "bubbles", in the place of the module position, like this:
 
+When in normal `listening` mode:
+![Full](./images/Assistant_1.png)
 
-![Full](./docs/images/Assistant1.png)
-![Full](./docs/images/Assistant2.png)
-![Full](./docs/images/Assistant3.png)
+When in Magic Mirror `control` mode:
+![Full](./images/Assistant_MM.png)
+
+When in `Google Assistant` mode:
+![Full](./images/Assistant_GA.png)
 
 
 ---
@@ -268,7 +273,7 @@ For detailed information, See the [Wiki](https://github.com/eouia/MMM-Assistant/
 
 #### Contribution
 
-Feel free to post issues and PR's related to this module.
+Feel free to post issues and PR's related to this module.  
 For all other or general questions, please refer to the [MagicMirror Forum](https://forum.magicmirror.builders/).
 
 #### Credits

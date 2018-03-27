@@ -3,8 +3,8 @@
  * FileName:     node_helper.js
  * Author:       eouia
  * License:      MIT
- * Date:         2018-03-26
- * Version:      1.0.1
+ * Date:         2018-03-27
+ * Version:      1.0.2
  * Description:  A MagicMirror module to control your modules
  * Format:       4-space TAB's (no TAB chars), mixed quotes
  *
