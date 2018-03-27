@@ -25,42 +25,53 @@ A Voice Commander and Google-Assistant for MagicMirror
 ### Screenshots
 
 There is not much to see since this is a voice based module. But when the module has recognized 
-one of your 2 wakewords **`smart-mirror`** (for MM control) or **`snowboy`** (for GA interaction), there will 
-appear a small icon of XXXX or the google "bubbles" like this:
+one of your 2 wakewords; **`smart-mirror`** (for MM control) or **`snowboy`** (for GA interaction), there will 
+appear a small square-pretzel icon of "⌘" or the Google "bubbles" like this:
 
 
 ![Full](./docs/images/Assistant1.png)
 ![Full](./docs/images/Assistant2.png)
+![Full](./docs/images/Assistant3.png)
 
 
 ---
 
 ### Installation
 
-There are 3 parts to the installation: 
+There are 5 parts to the installation: 
 
-0. Make sure your RPi OS is not too old
-1. Update nodejs and npm
+0. Make sure your RPi OS is not too old...
+1. Update *nodejs* and *npm*
 2. Install the dependencies
 3. Install the Assistant module
+4. Setup your *GA* API account
+5. Post Installation
+6. ~~Configuration~~ 
 
 
-**(0) Update your Raspbian OS**
+**(0) To Update your OS**
 
-The current Raspbian OS version is: `Stretch (9.4)`.
+The current Raspbian OS version is: `Stretch (9.4)`. You can find your version with:
 
 ```bash
-sudo apt-get update 
-sudo apt-get upgrade
 uname -a
 sudo lsb_release -a
 ```
 
+If you need to update, use:
 
-**(1) Update OS, nodejs/npm**
+
+```bash
+sudo apt-get update 
+sudo apt-get upgrade
+```
+
+
+**(1) To Update *nodejs* & *npm***
 
 Before anything, make sure you are using the latest stable release of *nodejs* and *npm*.
 They are currently:
+
 ```bash
 # Check the nodejs and npm versions
 node -v && npm -v
@@ -68,17 +79,17 @@ node -v && npm -v
 v9.8.0
 5.8.0
 ```
+
 If they are very different from this, then update using [these](https://raspberrypi.stackexchange.com/a/77483/17798) instructions.
 
 
-**(2) Install the depdendencies**
+**(2) To Install the Depdendencies**
 
 ```bash
 sudo apt-get install libmagic-dev libatlas-base-dev libasound2-dev sox libsox-fmt-all libttspico-utils
 ```
 
-
-**(3) Install the Assistant Module**
+**(3) To Install the Assistant Module**
 
 
 ```bash
@@ -88,13 +99,16 @@ cd MMM-Assistant
 npm install
 ```
 
+**(4) Setting up the API Accounts**
+
+*WIP*
 
 :red_circle: Now go to the [Wiki page](https://github.com/eouia/MMM-Assistant/wiki) and follow all the steps in 
 `step 3` to create the *Google Assistant* and *Google Cloud Speech* accounts and settings. When done, 
 proceed to the post installation below.
 
 
-**Post installation:**
+**(5) Post Installation**
 
 ```bash
 cd ~/MagicMirror/modules/MMM-Assistant/
@@ -103,9 +117,9 @@ npm install --save-dev electron-rebuild
 ./node_modules/.bin/electron-rebuild
 ```
 
-This step will take a very long time, as it need to manually compile the [gRPC](https://github.com/grpc/grpc) dependency.
-There is also a *node/npm gprc* [here](https://www.npmjs.com/package/grpc) with a GitHub repo [here](https://github.com/grpc/grpc-node).  
-:warning: This take about **~25 minutes** on a RPi3, with little or no output. Do not interrupt.
+This step will take a very long time, as it need to manually compile the [gRPC](https://github.com/grpc/grpc) dependency.  
+There is also a [node/npm gprc](https://www.npmjs.com/package/grpc) with the [repo](https://github.com/grpc/grpc-node).  
+:warning: This take about **~25 minutes** on a RPi3, with little or no output. Do not interrupt! :warning:
 
 
 ---
@@ -125,62 +139,63 @@ into the fields marked: `YOUR_PROJECT_ID` and `YOUR_DOWNLOADED_PRIVATE_KEY.json`
 
 ```javascript
 {
-  module: 'MMM-Assistant',
-  position: 'bottom_left',
-  config: {
-    assistant: {
-      auth: {
-        keyFilePath: "secret.json",             // REQUIRED (Google Assistant API) -- OAuth2 x509 cert
-        savedTokensPath: "resources/tokens.js"  // REQUIRED (Google Assitant API) -- accesss_token & refresh_token
-      },
-      audio: {
-        encodingIn: "LINEAR16",     // Default. No need to change.
-        sampleRateOut: 16000        // Default. No need to change.
-      }
-    },
-    snowboy: {
-      models: [
-        {
-          file: "resources/smart_mirror.umdl",  // This file define your MM wake word. (See doc notes.)
-          sensitivity: 0.5,
-          hotwords : "MIRROR"                   // Default model: "MIRROR". (This is not the wake word!)
+    module: 'MMM-Assistant',
+    position: 'bottom_left',
+    config: {
+        assistant: {
+            auth: {
+                keyFilePath: "secret.json",             // REQUIRED (Google Assistant API) -- OAuth2 x509 cert
+                savedTokensPath: "resources/tokens.js"  // REQUIRED (Google Assitant API) -- accesss_token & refresh_token
+            },
+            conversation: {                             // GA_SDK_22
+                lang: 'en-US',                          // GA_SDK_22
+                audio: {
+                    encodingIn: "LINEAR16",             // Default. No need to change.
+                    sampleRateOut: 16000                // Default. No need to change.
+                }
+            },                                          // GA_SDK_22
         },
-        {
-          file: "resources/snowboy.umdl",       // This file define your GA wake word. (See doc notes.)
-          sensitivity: 0.5,
-          hotwords : "ASSISTANT"                // Default model: "ASSISTANT". (This is not the wake word!)
-        }
-      ]
-    },
-    record: {
-      threshold: 0,                 // Default. No need to change.
-      verbose:false,                // Deafult: true  -- for checking recording status.
-      recordProgram: 'rec',         // You can use 'rec', 'sox', but we recommend 'arecord'
-      silence: 2.0                  // Default. No need to change.
-    },
-    stt: {
-      auth: [{                       // You can use multiple accounts to save money
-        projectId:'YOUR_PROJECT_ID',                         // REQUIRED (Google Voice API) -- project_id
-        keyFilename: 'YOUR_DOWNLOADED_PRIVATE_KEY.json'      // REQUIRED (Google Voice API) -- service_account / private_key
-      }],
-      request: {
-        encoding: 'LINEAR16',       // Default. No need to change.
-        sampleRateHertz: 16000,     // Default. No need to change.
-        languageCode: 'en-US'       // [en-US]  To set the default GA speech request language.
-                                    // (See: https://cloud.google.com/speech/docs/languages)
-      },
-    },
-    speak: {
-      useAlert: true,               // [true]  Enable this to show the understood text of your speech
-      language: 'en-US',            // [en-US] To set the default GA speech reply language.
-    },
-    alias: [                        // You can use aliases for difficult pronunciation or easy using.
-      {
-        "help :command" : ["teach me :command", "what is :command"]
-      }
-    ]
-  }
-},
+        snowboy: {
+            models: [
+                {
+                    file: "resources/smart_mirror.umdl",// This file define your MM wake word. (See doc notes.)
+                    sensitivity: 0.5,
+                    hotwords : "MIRROR"                 // Default model: "MIRROR". (This is not the wake word!)
+                },
+                {
+                    file: "resources/snowboy.umdl",     // This file define your GA wake word. (See doc notes.)
+                    sensitivity: 0.5,
+                    hotwords : "ASSISTANT"              // Default model: "ASSISTANT". (This is not the wake word!)
+                }
+            ]
+        },
+        record: {
+            threshold: 0,                 // Default. No need to change.
+            verbose:false,                // Deafult: true  -- for checking recording status.
+            recordProgram: 'rec',         // You can use 'rec', 'sox', but we recommend 'arecord'
+            silence: 2.0                  // Default. No need to change.
+        },
+        stt: {
+            auth: [{                      // You can use multiple accounts to save money
+                projectId:'YOUR_PROJECT_ID',                    // REQUIRED (Google Voice API) -- project_id
+                keyFilename: 'YOUR_DOWNLOADED_PRIVATE_KEY.json' // REQUIRED (Google Voice API) -- service_account / private_key
+            }],
+            request: {
+                encoding: 'LINEAR16',     // Default. No need to change.
+                sampleRateHertz: 16000,   // Default. No need to change.
+                languageCode: 'en-US'     // [en-US]  To set the default GA speech request language.
+                                          // (See: https://cloud.google.com/speech/docs/languages)
+            },
+        },
+        speak: {
+            useAlert: true,               // [true]  Enable this to show the understood text of your speech
+            language: 'en-US',            // [en-US] To set the default GA speech reply language.
+        },
+        alias: [{                         // You can use aliases for difficult pronunciation or easy using.
+                "help :command" : ["teach me :command", "what is :command"]
+        }]
+    }
+}, // END
 
 ```
 
@@ -194,10 +209,10 @@ You can change this configuration later when you see that it works.
 
 | Command | Who? | Description |
 |:------- |:---- |:----------- |
-| **snowboy** | GA   | The Google Assitant wake word |
-| **smart-mirror** | MM | The Smart Mirror (Snowboy)  command mode wake word |
+| **`snowboy`** | GA   | The Google Assitant wake word |
+| **`smart-mirror`** | MM | The Magic Mirror *command mode* wake word |
 | - | - | - |
-| help `command` | MM | Explain help about a specific "`command`" | 
+| help *`command`* | MM | Explain help about a specific *`command`* | 
 | list all commands | MM | List all available commands | 
 | list all modules | MM | List all available modules | 
 | hide all modules | MM | Hide all available modules | 
@@ -219,7 +234,7 @@ But every recognition request is considered to last a minimum 15 seconds. So exa
 Additional requests will then be charged $0.006 per request, if you have a paid accout. Thereafter, the requests will be blocked. 
 However, if you create an account for the first time, you will be given about $300 USD in credit, to use within 1 year, for free.
 
-Therefore it is very important that we get the Amazon Alexa service implementation going, as they are completely free!
+*Therefore it is very important that we get the Amazon Alexa service implementation going, as they are completely free!*
 
 
 ### Dependencies (node/npm)
@@ -230,10 +245,12 @@ This module depend on the following *npm* packages:
 |:----------- |:------- |:------ |
 | [@google-cloud/speech](https://www.npmjs.com/package/@google-cloud/speech) | 1.3.0 | [github](https://github.com/googleapis/nodejs-speech) |
 | [google-assistant](https://www.npmjs.com/package/google-assistant) | 0.2.2 | [github](https://github.com/endoplasmic/google-assistant) |
-| [node-aplay](https://www.npmjs.com/package/node-aplay) | 1.0.3 | Deprecated! Use [aplay](https://www.npmjs.com/package/aplay) -  [github](https://github.com/roccomuso/node-aplay) | 
-| [node-record-lpcm16](https://www.npmjs.com/package/node-record-lpcm16) | 0.3.0 | | [github](https://github.com/gillesdemey/node-record-lpcm16) | 
-| [snowboy](https://www.npmjs.com/package/snowboy) | 1.2.0) | [github](https://github.com/Kitt-AI/snowboy) | 
-| [speaker](https://www.npmjs.com/package/speaker) | 0.4.0) | [github](https://github.com/TooTallNate/node-speaker) |
+| [grpc](https://www.npmjs.com/package/grpc) | 1.10.0 | [here](https://github.com/grpc/grpc-node/tree/master/packages/grpc-native-core) |
+| ~~[node-aplay](https://www.npmjs.com/package/node-aplay)~~ | 1.0.3 | **Deprecated!** | 
+| [aplay](https://www.npmjs.com/package/aplay) | 1.2.0 |  [github](https://github.com/roccomuso/node-aplay) | 
+| [node-record-lpcm16](https://www.npmjs.com/package/node-record-lpcm16) | 0.3.0 | [github](https://github.com/gillesdemey/node-record-lpcm16) | 
+| [snowboy](https://www.npmjs.com/package/snowboy) | 1.2.0 | [github](https://github.com/Kitt-AI/snowboy) | 
+| [speaker](https://www.npmjs.com/package/speaker) | 0.4.0 | [github](https://github.com/TooTallNate/node-speaker) |
 
 These are also listed in the `package.json` file and should be installed automatically when using *npm install*.
 However, those may require other packages. 

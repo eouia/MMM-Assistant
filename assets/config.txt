@@ -1,0 +1,58 @@
+{
+    module: 'MMM-Assistant',
+    position: 'bottom_left',
+    config: {
+        assistant: {
+            auth: {
+                keyFilePath: "secret.json",             // REQUIRED (Google Assistant API) -- OAuth2 x509 cert
+                savedTokensPath: "resources/tokens.js"  // REQUIRED (Google Assitant API) -- accesss_token & refresh_token
+            },
+            conversation: {                             // GA_SDK_22
+                lang: 'en-US',                          // GA_SDK_22
+                audio: {
+                    encodingIn: "LINEAR16",             // Default. No need to change.
+                    sampleRateOut: 16000                // Default. No need to change.
+                }
+            },                                          // GA_SDK_22
+        },
+        snowboy: {
+            models: [
+                {
+                    file: "resources/smart_mirror.umdl",// This file define your MM wake word. (See doc notes.)
+                    sensitivity: 0.5,
+                    hotwords : "MIRROR"                 // Default model: "MIRROR". (This is not the wake word!)
+                },
+                {
+                    file: "resources/snowboy.umdl",     // This file define your GA wake word. (See doc notes.)
+                    sensitivity: 0.5,
+                    hotwords : "ASSISTANT"              // Default model: "ASSISTANT". (This is not the wake word!)
+                }
+            ]
+        },
+        record: {
+            threshold: 0,                 // Default. No need to change.
+            verbose:false,                // Deafult: true  -- for checking recording status.
+            recordProgram: 'rec',         // You can use 'rec', 'sox', but we recommend 'arecord'
+            silence: 2.0                  // Default. No need to change.
+        },
+        stt: {
+            auth: [{                      // You can use multiple accounts to save money
+                projectId:'YOUR_PROJECT_ID',                    // REQUIRED (Google Voice API) -- project_id
+                keyFilename: 'YOUR_DOWNLOADED_PRIVATE_KEY.json' // REQUIRED (Google Voice API) -- service_account / private_key
+            }],
+            request: {
+                encoding: 'LINEAR16',     // Default. No need to change.
+                sampleRateHertz: 16000,   // Default. No need to change.
+                languageCode: 'en-US'     // [en-US]  To set the default GA speech request language.
+                                          // (See: https://cloud.google.com/speech/docs/languages)
+            },
+        },
+        speak: {
+            useAlert: true,               // [true]  Enable this to show the understood text of your speech
+            language: 'en-US',            // [en-US] To set the default GA speech reply language.
+        },
+        alias: [{                         // You can use aliases for difficult pronunciation or easy using.
+                "help :command" : ["teach me :command", "what is :command"]
+        }]
+    }
+}, // END

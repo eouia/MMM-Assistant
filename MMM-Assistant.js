@@ -1,12 +1,18 @@
-/* global Module */
-
-/* Magic Mirror
- * Module: MMM-Assistant
+/* --------------------------------------------------------------------------
+ * Module:       MMM-Assistant
+ * FileName:     MMM-Assistant.js
+ * Author:       eouia
+ * License:      MIT
+ * Date:         2018-03-26
+ * Version:      1.0.1
+ * Description:  A MagicMirror module to control your modules
+ * Format:       4-space TAB's (no TAB chars), mixed quotes
  *
- * By
- * MIT Licensed.
+ * URL:          https://github.com/eouia/MMM-Assistant
+ * --------------------------------------------------------------------------
  */
 
+// XXX???
 String.prototype.toRegExp = function() {
   var lastSlash = this.lastIndexOf("/")
   if(lastSlash > 1) {
@@ -20,24 +26,27 @@ String.prototype.toRegExp = function() {
   }
 }
 
-
-
-Module.register("MMM-Assistant", {
+Module.register("MMM-Assistant",
+  // Default Settings
+  {
   defaults: {
     system: {
-      readAlert : true, // reserved for later
-      commandRecognition: 'google-cloud-speech', //'google-assistant' (reserved for later)
-      commandSpeak: 'pico', //google-translate (reserved for later)
+      readAlert : true,                             // Reserved: for ??
+      commandRecognition: 'google-cloud-speech',    // Reserved: for 'google-assistant'
+      commandSpeak: 'pico',                         // Reserved: for 'google-translate'
     },
     assistant: {
-      auth: {
-        keyFilePath: "secret.json",
-        savedTokensPath: "resources/tokens.js"
-      },
-      audio: {
-        encodingIn: "LINEAR16",
-        sampleRateOut: 16000
-      }
+        auth: {
+            keyFilePath: "secret.json",
+            savedTokensPath: "resources/tokens.js"
+        },
+        conversation: {             // GA_SDK_22
+            lang: 'en-US',          // GA_SDK_22
+            audio: {
+                encodingIn: "LINEAR16",
+                sampleRateOut: 16000
+            }
+        },                          // GA_SDK_22
     },
     snowboy: {
       models: [
@@ -61,13 +70,13 @@ Module.register("MMM-Assistant", {
     },
     stt: {
       auth: [{
-        projectId: '', //ProjectId from Google Console
-        keyFilename: ''
+        projectId: '',              // ProjectId from Google Console
+        keyFilename: ''             // 
       }],
       request: {
         encoding: 'LINEAR16',
         sampleRateHertz: 16000,
-        languageCode: 'en-US' //See https://cloud.google.com/speech/docs/languages
+        languageCode: 'en-US'       // https://cloud.google.com/speech/docs/languages
       },
     },
     speak: {
@@ -96,7 +105,8 @@ Module.register("MMM-Assistant", {
 
   getTranslations: function() {
     return {
-      en: "translations/en.json",
+        en: "translations/en.json",
+        fr: "translations/fr.json",
     }
   },
 
@@ -203,7 +213,6 @@ Module.register("MMM-Assistant", {
       commands += ("<b class='command'>\"" + tx + "\"</b>")
     })
     text = text + commands + "."
-
     handler.response(text)
   },
 
@@ -415,7 +424,8 @@ Module.register("MMM-Assistant", {
       case 'MODE':
         this.status = payload.mode
         if (payload.mode == 'SPEAK_ENDED') {
-          this.sendNotification("HIDE_ALERT");
+//          this.sendNotification("HIDE_ALERT");
+          if (payload.useAlert) { this.sendNotification("HIDE_ALERT"); }
           this.sendSocketNotification("HOTWORD_STANDBY")
         }
 
@@ -438,10 +448,7 @@ Module.register("MMM-Assistant", {
     }
   },
 
-
-
   hotwordDetected : function (type) {
-
     if (type == 'ASSISTANT') {
       this.sendSocketNotification('ACTIVATE_ASSISTANT')
       this.status = 'ACTIVATE_ASSISTANT'
@@ -520,7 +527,7 @@ Module.register("MMM-Assistant", {
       var handler = new AssistantHandler(msg, null, callbacks)
       handler.response(this.translate("INVALID_COMMAND"), msgText)
     }
-    //cb("HOTWORD_STANDBY")
+    // cb("HOTWORD_STANDBY")
   },
 
   response: function(text, originalCommand, option) {
@@ -579,7 +586,9 @@ Module.register("MMM-Assistant", {
 })
 
 
-
+//-----------------------------------------------------------------
+//  Helper Functions
+//-----------------------------------------------------------------
 
 function AssistantCommandRegister (module, registerCallback) {
   this.module = module

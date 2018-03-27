@@ -1,6 +1,20 @@
+/* --------------------------------------------------------------------------
+ * Module:       MMM-Assistant
+ * FileName:     node_helper.js
+ * Author:       eouia
+ * License:      MIT
+ * Date:         2018-03-26
+ * Version:      1.0.1
+ * Description:  A MagicMirror module to control your modules
+ * Format:       4-space TAB's (no TAB chars), mixed quotes
+ *
+ * URL:          https://github.com/eouia/MMM-Assistant
+ * --------------------------------------------------------------------------
+ */
+
 'use strict'
 
-const Sound = require('node-aplay')
+const Sound = require('node-aplay') // Deprecated: change to "aplay"
 const path = require('path')
 const fs = require('fs')
 const record = require('node-record-lpcm16')
@@ -15,6 +29,7 @@ const exec = require('child_process').exec
 var NodeHelper = require("node_helper")
 
 module.exports = NodeHelper.create({
+
   start: function () {
     this.config = {}
     this.status = 'NOTACTIVATED'
@@ -36,7 +51,6 @@ module.exports = NodeHelper.create({
       this.config.stt.auth[i].keyFilename
         = path.resolve(__dirname, this.config.stt.auth[i].keyFilename)
     }
-
 
     this.sendSocketNotification('MODE', {mode:"INITIALIZED"})
   },
@@ -75,7 +89,6 @@ module.exports = NodeHelper.create({
           } else if (this.config.system.commandRecognition == 'google-assistant') {
             if(this.pause.size == 0) this.activateAssistant('COMMAND')
           }
-
         }
         break
       case 'SPEAK':
@@ -100,6 +113,7 @@ module.exports = NodeHelper.create({
         break
     }
   },
+
   test: function(test) {
     this.sendSocketNotification('COMMAND', test)
   },
@@ -112,9 +126,9 @@ module.exports = NodeHelper.create({
     var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
 
     function getTmpFile() {
-    	var random = Math.random().toString(36).slice(2),
-    		path = '/tmp/' + random + '.wav'
-    	return (!fs.existsSync(path)) ? path : getTmpFile()
+        var random = Math.random().toString(36).slice(2),
+        path = '/tmp/' + random + '.wav'
+        return (!fs.existsSync(path)) ? path : getTmpFile()
     }
 
     function say(text, lang, cb) {
@@ -123,12 +137,12 @@ module.exports = NodeHelper.create({
       text = text.replace(/\"/g, "'")
       text = text.trim()
 
-    	var file = getTmpFile(),
-    		command = commandTmpl.replace('{{lang}}', lang).replace('{{text}}', text).replace(/\{\{file\}\}/g, file)
-    	  exec(command, function(err) {
-    		cb && cb(err)
-    		fs.unlink(file, ()=>{})
-    	})
+      var file = getTmpFile(),
+        command = commandTmpl.replace('{{lang}}', lang).replace('{{text}}', text).replace(/\{\{file\}\}/g, file)
+        exec(command, function(err) {
+            cb && cb(err)
+            fs.unlink(file, ()=>{})
+        })
     }
 
     this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED', useAlert:option.useAlert, originalCommand:option.originalCommand, text:text})
@@ -171,10 +185,13 @@ module.exports = NodeHelper.create({
     if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
   },
   */
+
   activateHotword: function() {
     console.log('[ASSTNT] Snowboy Activated')
+
     this.sendSocketNotification('MODE', {mode:'HOTWORD_STARTED'})
     new Sound(path.resolve(__dirname, 'resources/ding.wav')).play();
+
     var models = new Models();
     this.config.snowboy.models.forEach((model)=>{
       model.file = path.resolve(__dirname, model.file)
@@ -187,6 +204,7 @@ module.exports = NodeHelper.create({
       models: models,
       audioGain: 2.0
     })
+
     detector.on('silence', ()=>{
       if (this.pause.size > 0) {
         record.stop()
@@ -194,6 +212,7 @@ module.exports = NodeHelper.create({
         return
       }
     })
+
     detector.on('sound', (buffer)=>{
       if (this.pause.size > 0) {
         record.stop()
@@ -225,7 +244,8 @@ module.exports = NodeHelper.create({
     var transcription = ""
     console.log('[ASSTNT] Assistant Activated')
     this.sendSocketNotification('MODE', {mode:'ASSISTANT_STARTED'})
-    const assistant = new GoogleAssistant(this.config.assistant)
+//    const assistant = new GoogleAssistant(this.config.assistant)
+    const assistant = new GoogleAssistant(this.config.assistant.auth) // GA_SDK_22
 
     const startConversation = (conversation) => {
       //console.log('Say something!');
@@ -242,8 +262,8 @@ module.exports = NodeHelper.create({
             this.sendSocketNotification('MODE', {mode:'ASSISTANT_SPEAKING'})
             speaker.write(data);
             spokenResponseLength += data.length;
-            const audioTime
-              = spokenResponseLength / (this.config.assistant.audio.sampleRateOut * 16 / 8) * 1000;
+//            const audioTime = spokenResponseLength / (this.config.assistant.audio.sampleRateOut * 16 / 8) * 1000;
+            const audioTime = spokenResponseLength / (this.config.assistant.conversation.audio.sampleRateOut * 16 / 8) * 1000; // GA_SDK_22
             clearTimeout(speakerTimer);
             speakerTimer = setTimeout(() => {
               speaker.end();
@@ -303,7 +323,8 @@ module.exports = NodeHelper.create({
       // setup the speaker
       var speaker = new Speaker({
         channels: 1,
-        sampleRate: this.config.assistant.audio.sampleRateOut,
+//        sampleRate: this.config.assistant.audio.sampleRateOut,
+        sampleRate: this.config.assistant.conversation.audio.sampleRateOut, // GA_SDK_22
       });
       speaker
         .on('open', () => {
@@ -317,7 +338,8 @@ module.exports = NodeHelper.create({
     // setup the assistant
     assistant
       .on('ready', () => {
-        assistant.start()
+//        assistant.start()
+        assistant.start(this.config.assistant.conversation) // GA_SDK_22
       })
       .on('started', startConversation)
       .on('error', (error) => {
