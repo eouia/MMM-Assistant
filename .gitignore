@@ -1,8 +1,6 @@
 assets/*.json
 assets/tokens.js
 node_modules/
-docs/
 devbak/
 resources/p-models/
 package-lock.json
-
