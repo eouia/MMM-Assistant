@@ -5,6 +5,7 @@
 [![GitHub last commit](https://img.shields.io/github/last-commit/eouia/MMM-Assistant.svg)](https://github.com/eouia/MMM-Assistant)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/eouia/MMM-Assistant/graphs/commit-activity)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/eouia/MMM-Assistant.svg)](http://isitmaintained.com/project/eouia/MMM-Assistant "Average time to resolve an issue")
+[![Dependency Status](https://beta.gemnasium.com/badges/github.com/eouia/MMM-Assistant.svg)](https://beta.gemnasium.com/projects/github.com/eouia/MMM-Assistant)
 
 A Voice Commander and Google-Assistant for MagicMirror
 
@@ -32,7 +33,7 @@ The following icons will appear, depending on the operating *mode* it's in:
 
 
 | Normal `Listening` | Magic Mirror `Control` | `Google Assistant` | `Alexa` | `Error` |
-|:------------------ |:---------------------- |:------------------ |:------- |:------- | 
+|:------------------:|:----------------------:|:------------------:|:-------:|:-------:| 
 | ![Full](./images/Assistant_1.png) | ![Full](./images/Assistant_MM.png) | ![Full](./images/Assistant_GA.png) | ![Full](./images/Assistant_AA_bw.png) | ![Full](./images/Assistant_ProcError.png) |
 
 
