@@ -25,21 +25,15 @@ A Voice Commander and Google-Assistant for MagicMirror
 
 ### Screenshots
 
-There is not much to see since this is a voice based module. But when the module has recognized 
-one of your 2 wakewords; **`smart-mirror`** (for MM control) or **`snowboy`** (for GA interaction), there will 
-appear a square-pretzel icon ("⌘") or the Google "bubbles", in the place of the module position, like this:
+There is not much to see since this is a voice based module. But there is a small microphone icon in the modules position.
+The icon changes depending on its status, so if you use the wake workds, it will change and also indicate this change by 
+playing a "ding". The 2 available wakewords are: **`smart-mirror`** (for MM control) and **`snowboy`** (for GA interaction).
+The following icons will appear, depending on the operating *mode* it's in:
 
-When in normal `listening` mode:  
 
-![Full](./images/Assistant_1.png)
-
-When in Magic Mirror `control` mode:  
-
-![Full](./images/Assistant_MM.png)
-
-When in `Google Assistant` mode:  
-
-![Full](./images/Assistant_GA.png)
+| Normal `Listening` | Magic Mirror `Control` | `Google Assistant` | `Alexa` | `Error` |
+|:------------------ |:---------------------- |:------------------ |:------- |:------- | 
+| ![Full](./images/Assistant_1.png) | ![Full](./images/Assistant_MM.png) | ![Full](./images/Assistant_GA.png) | ![Full](./images/Assistant_AA_bw.png) | ![Full](./images/Assistant_ProcError.png) |
 
 
 ---
@@ -269,6 +263,9 @@ For detailed information, See the [Wiki](https://github.com/eouia/MMM-Assistant/
 
 
 #### Bugs and Warnings
+
+* Sometimes the GA hangs (issue #25) and the `Error` icon is shown froozen. If this happens,  
+  just re-load the MM server page from a remote connection and it will reset.
 
 :information_source: For other bugs, issues, details and updates, please refer to the 
 [issue tracker](https://github.com/eouia/MMM-Assistant/issues).

@@ -22,7 +22,8 @@ const Detector = require('snowboy').Detector
 const Models = require('snowboy').Models
 const Speaker = require('speaker')
 const GoogleAssistant = require('google-assistant')
-const Speech = require('@google-cloud/speech')
+//const Speech = require('@google-cloud/speech')
+const speech = require('@google-cloud/speech')
 const exec = require('child_process').exec
 //const tts = require('picotts')
 
@@ -40,18 +41,13 @@ module.exports = NodeHelper.create({
 
   initialize: function (config) {
     this.config = config
-
-    this.config.assistant.auth.keyFilePath
-      = path.resolve(__dirname, this.config.assistant.auth.keyFilePath)
-    this.config.assistant.auth.savedTokensPath
-      = path.resolve(__dirname, this.config.assistant.auth.savedTokensPath)
-
+    this.config.assistant.auth.keyFilePath     = path.resolve(__dirname, this.config.assistant.auth.keyFilePath)
+    this.config.assistant.auth.savedTokensPath = path.resolve(__dirname, this.config.assistant.auth.savedTokensPath)
     this.commandAuthMax = this.config.stt.auth.length
-    for(var i=0; i<this.commandAuthMax; i++) {
-      this.config.stt.auth[i].keyFilename
-        = path.resolve(__dirname, this.config.stt.auth[i].keyFilename)
-    }
 
+    for(var i=0; i<this.commandAuthMax; i++) {
+      this.config.stt.auth[i].keyFilename = path.resolve(__dirname, this.config.stt.auth[i].keyFilename)
+    }
     this.sendSocketNotification('MODE', {mode:"INITIALIZED"})
   },
 
@@ -123,6 +119,7 @@ module.exports = NodeHelper.create({
     option.language = (typeof commandOption.language !== 'undefined') ? commandOption.language : this.config.speak.language
     option.useAlert = (typeof commandOption.useAlert !== 'undefined') ? commandOption.useAlert : this.config.speak.useAlert
     option.originalCommand = (originalCommand) ? originalCommand : ""
+    // Use the small footprint Text-to-Speech (TTS): pico2wave
     var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
 
     function getTmpFile() {
@@ -265,14 +262,11 @@ module.exports = NodeHelper.create({
 //            const audioTime = spokenResponseLength / (this.config.assistant.audio.sampleRateOut * 16 / 8) * 1000;
             const audioTime = spokenResponseLength / (this.config.assistant.conversation.audio.sampleRateOut * 16 / 8) * 1000; // GA_SDK_22
             clearTimeout(speakerTimer);
-            speakerTimer = setTimeout(() => {
-              speaker.end();
-            }, audioTime - Math.max(0, now - speakerOpenTime));
+            speakerTimer = setTimeout(() => { speaker.end(); }, audioTime - Math.max(0, now - speakerOpenTime));
           } else {
             //record.stop()
             speaker.end()
           }
-
         })
         .on('end-of-utterance', () => {
           record.stop()
@@ -352,14 +346,19 @@ module.exports = NodeHelper.create({
 
   activateCommand: function() {
     this.sendSocketNotification('MODE', {mode:'COMMAND_STARTED'})
-    const speech = Speech(this.config.stt.auth[this.commandAuthIndex++])
+
+    // This is giving an error in GA SDK v0.2.2:
+    // "TypeError: Speech is not a function"
+    //const speech = Speech(this.config.stt.auth[this.commandAuthIndex++])
+    const client = new speech.SpeechClient(this.config.stt.auth[this.commandAuthIndex++])
     if (this.commandAuthIndex >= this.commandAuthMax) this.commandAuthIndex = 0
 
     const request = {
       config: this.config.stt.request,
       interimResults: false // If you want interim results, set this to true
     }
-    const recognizeStream = speech.streamingRecognize(request)
+    //const recognizeStream = speech.streamingRecognize(request)
+    const recognizeStream = client.streamingRecognize(request)
       .on('error', (err)=>{
         console.log('[ASSTNT] RecognizeStream Error: ', err)
         record.stop()
@@ -368,14 +367,8 @@ module.exports = NodeHelper.create({
       .on('data', (data) => {
         this.sendSocketNotification('MODE', {mode:'COMMAND_LISTENED'})
         if ((data.results[0] && data.results[0].alternatives[0])) {
-          console.log(
-            "[ASSTNT] Command recognized:",
-            data.results[0].alternatives[0].transcript
-          )
-          this.sendSocketNotification(
-            'COMMAND',
-            data.results[0].alternatives[0].transcript
-          )
+          console.log("[ASSTNT] Command recognized: ", data.results[0].alternatives[0].transcript)
+          this.sendSocketNotification('COMMAND',       data.results[0].alternatives[0].transcript)
           record.stop()
         }
         if (this.pause.size > 0) {

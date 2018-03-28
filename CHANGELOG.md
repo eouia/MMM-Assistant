@@ -11,6 +11,14 @@ All notable changes to this project will be documented in this file.
 ---
 
 
+#### [1.0.x] - 2018-03-xx
+
+- Fixed #35 for new GA SDK v0.2.2
+- Updated response icons in README
+- Added response icons for amazon/alexa to images directory
+
+
+
 #### [1.0.2] - 2018-03-27
 
 Have updated Assistant to use npm:
