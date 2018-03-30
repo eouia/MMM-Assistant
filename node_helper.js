@@ -3,8 +3,8 @@
  * FileName:     node_helper.js
  * Author:       eouia
  * License:      MIT
- * Date:         2018-03-27
- * Version:      1.0.2
+ * Date:         2018-03-31
+ * Version:      1.0.3
  * Description:  A MagicMirror module to control your modules
  * Format:       4-space TAB's (no TAB chars), mixed quotes
  *
@@ -14,7 +14,8 @@
 
 'use strict'
 
-const Sound = require('node-aplay') // Deprecated: change to "aplay"
+const Sound = require('node-aplay') // Deprecated
+//const Sound = require('aplay')
 const path = require('path')
 const fs = require('fs')
 const record = require('node-record-lpcm16')
@@ -22,7 +23,6 @@ const Detector = require('snowboy').Detector
 const Models = require('snowboy').Models
 const Speaker = require('speaker')
 const GoogleAssistant = require('google-assistant')
-//const Speech = require('@google-cloud/speech')
 const speech = require('@google-cloud/speech')
 const exec = require('child_process').exec
 //const tts = require('picotts')
@@ -95,12 +95,12 @@ module.exports = NodeHelper.create({
         }
         break
       case 'REBOOT':
-        execute('sudo reboot now', function(callback){
+        execute('sudo reboot now', function(callback) {
           console.log(callback)
         })
         break
       case 'SHUTDOWN':
-        execute('sudo shutdown -t 1', function(callback){
+        execute('sudo shutdown -t 1', function(callback) {
           console.log(callback)
         })
         break
@@ -195,7 +195,6 @@ module.exports = NodeHelper.create({
       models.add(model)
     })
     var mic = record.start(this.config.record)
-
     var detector = new Detector({
       resource: path.resolve(__dirname, "resources/common.res"),
       models: models,
@@ -241,16 +240,16 @@ module.exports = NodeHelper.create({
     var transcription = ""
     console.log('[ASSTNT] Assistant Activated')
     this.sendSocketNotification('MODE', {mode:'ASSISTANT_STARTED'})
-//    const assistant = new GoogleAssistant(this.config.assistant)
-    const assistant = new GoogleAssistant(this.config.assistant.auth) // GA_SDK_22
+    const assistant = new GoogleAssistant(this.config.assistant.auth)
 
     const startConversation = (conversation) => {
       //console.log('Say something!');
 
       let spokenResponseLength = 0;
-      let speakerOpenTime;
+      let speakerOpenTime = 0;
       let speakerTimer;
 
+      // Much of this is based on: ./node_modules/google-assistant/examples/speaker-helper.js
       conversation
         .on('audio-data', (data) => {
           //record.stop()
@@ -259,8 +258,7 @@ module.exports = NodeHelper.create({
             this.sendSocketNotification('MODE', {mode:'ASSISTANT_SPEAKING'})
             speaker.write(data);
             spokenResponseLength += data.length;
-//            const audioTime = spokenResponseLength / (this.config.assistant.audio.sampleRateOut * 16 / 8) * 1000;
-            const audioTime = spokenResponseLength / (this.config.assistant.conversation.audio.sampleRateOut * 16 / 8) * 1000; // GA_SDK_22
+            const audioTime = spokenResponseLength / (this.config.assistant.conversation.audio.sampleRateOut * 16 / 8) * 1000;
             clearTimeout(speakerTimer);
             speakerTimer = setTimeout(() => { speaker.end(); }, audioTime - Math.max(0, now - speakerOpenTime));
           } else {
@@ -297,8 +295,7 @@ module.exports = NodeHelper.create({
             } else {
               //@.@ What? There is no stop-conversation in gRpc ?????
             }
-          }
-          else {
+          } else {
             record.stop()
             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
           }
@@ -306,35 +303,28 @@ module.exports = NodeHelper.create({
         .on('error', (error) => {
           console.log('[ASSTNT] Conversation Error:', error);
           record.stop()
+          speaker.end() // Added by E3V3A: fix attempt for issue #25 --> Need to check for: "Error: Service unavailable"
           this.sendSocketNotification('ERROR', 'CONVERSATION')
+          return // added by E3V3A: Do we also need a return?
         })
-
 
       // pass the mic audio to the assistant
       var mic = record.start(this.config.record)
       mic.on('data', data => conversation.write(data));
 
-      // setup the speaker
+      // Setup Speaker
       var speaker = new Speaker({
         channels: 1,
-//        sampleRate: this.config.assistant.audio.sampleRateOut,
-        sampleRate: this.config.assistant.conversation.audio.sampleRateOut, // GA_SDK_22
+        sampleRate: this.config.assistant.conversation.audio.sampleRateOut,
       });
       speaker
-        .on('open', () => {
-          speakerOpenTime = new Date().getTime();
-        })
-        .on('close', () => {
-          conversation.end();
-        });
+        .on('open', () => { speakerOpenTime = new Date().getTime(); })
+        .on('close', () => { conversation.end(); });
     };
 
-    // setup the assistant
+    // Setup the Assistant
     assistant
-      .on('ready', () => {
-//        assistant.start()
-        assistant.start(this.config.assistant.conversation) // GA_SDK_22
-      })
+      .on('ready', () => { assistant.start(this.config.assistant.conversation) })
       .on('started', startConversation)
       .on('error', (error) => {
         console.log('[ASSTNT] Assistant Error:', error)
@@ -347,17 +337,13 @@ module.exports = NodeHelper.create({
   activateCommand: function() {
     this.sendSocketNotification('MODE', {mode:'COMMAND_STARTED'})
 
-    // This is giving an error in GA SDK v0.2.2:
-    // "TypeError: Speech is not a function"
-    //const speech = Speech(this.config.stt.auth[this.commandAuthIndex++])
     const client = new speech.SpeechClient(this.config.stt.auth[this.commandAuthIndex++])
     if (this.commandAuthIndex >= this.commandAuthMax) this.commandAuthIndex = 0
 
     const request = {
       config: this.config.stt.request,
-      interimResults: false // If you want interim results, set this to true
+      interimResults: false             // If you want interim results, set this to true    // E3V3A: [WTF is this??]
     }
-    //const recognizeStream = speech.streamingRecognize(request)
     const recognizeStream = client.streamingRecognize(request)
       .on('error', (err)=>{
         console.log('[ASSTNT] RecognizeStream Error: ', err)
@@ -377,7 +363,7 @@ module.exports = NodeHelper.create({
         }
       })
 
-  // Start recording and send the microphone input to the Speech API
+  // Start Recording and send the microphone input to the Speech API
     record
       .start(this.config.record)
       .on('error', (err)=>{

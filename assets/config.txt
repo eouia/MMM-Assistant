@@ -4,16 +4,16 @@
     config: {
         assistant: {
             auth: {
-                keyFilePath: "secret.json",             // REQUIRED (Google Assistant API) -- OAuth2 x509 cert
-                savedTokensPath: "resources/tokens.js"  // REQUIRED (Google Assitant API) -- accesss_token & refresh_token
+                keyFilePath:     "assets/google-client-secret.json",  // REQUIRED (Google Assistant API) -- OAuth2 x509 cert
+                savedTokensPath: "assets/google-access-tokens.json"   // REQUIRED (Google Assistant API) -- accesss_token & refresh_token
             },
-            conversation: {                             // GA_SDK_22
-                lang: 'en-US',                          // GA_SDK_22
+            conversation: {
+                lang: 'en-US',
                 audio: {
                     encodingIn: "LINEAR16",             // Default. No need to change.
                     sampleRateOut: 16000                // Default. No need to change.
                 }
-            },                                          // GA_SDK_22
+            },
         },
         snowboy: {
             models: [
@@ -32,13 +32,13 @@
         record: {
             threshold: 0,                 // Default. No need to change.
             verbose:false,                // Deafult: true  -- for checking recording status.
-            recordProgram: 'rec',         // You can use 'rec', 'sox', but we recommend 'arecord'
+            recordProgram: 'rec',         // You can use 'arecord', 'sox', but we recommend 'rec'
             silence: 2.0                  // Default. No need to change.
         },
         stt: {
-            auth: [{                      // You can use multiple accounts to save money
-                projectId:'YOUR_PROJECT_ID',                    // REQUIRED (Google Voice API) -- project_id
-                keyFilename: 'YOUR_DOWNLOADED_PRIVATE_KEY.json' // REQUIRED (Google Voice API) -- service_account / private_key
+            auth: [{                                             // You can use multiple accounts to save money
+                projectId:   'YOUR_PROJECT_ID',                  // REQUIRED (Google Voice API) -- project_id
+                keyFilename: './assets/google-private-key.json'  // REQUIRED (Google Voice API) -- service_account / private_key
             }],
             request: {
                 encoding: 'LINEAR16',     // Default. No need to change.

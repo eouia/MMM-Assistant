@@ -11,12 +11,19 @@ All notable changes to this project will be documented in this file.
 ---
 
 
-#### [1.0.x] - 2018-03-xx
+#### [1.0.3] - 2018-03-30
 
 - Fixed #35 for new GA SDK v0.2.2
 - Updated response icons in README
-- Added response icons for amazon/alexa to images directory
-
+- Updated universal Snowboy models and moved to ./resources/u-models/
+- Added response icons for amazon/alexa to ./images directory
+- Added Python and Bash scripts to generate Snowboy personal voice models
+- Changed google-auth.js scripts location to ./scripts and code
+- Changed location of all private files into ./assets + updated relevant code
+- Renamed private assets files:  (fixes #42)
+    secret.json       --> google-client-secret.json  
+    <downloaded>.json --> google-private-key.json  
+    tokens.json       --> google-access-tokens.json
 
 
 #### [1.0.2] - 2018-03-27

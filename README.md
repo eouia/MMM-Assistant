@@ -11,7 +11,7 @@ A Voice Commander and Google-Assistant for MagicMirror
 
 | STATUS: | Version | Date | Maintained? |
 |:------- |:------- |:---- |:----------- |
-| Working | `1.0.2` | 2018-03-27 | YES |
+| Working | `1.0.3` | 2018-03-30 | YES |
 
 
 #### What is this module doing?
@@ -32,8 +32,8 @@ playing a "ding". The 2 available wakewords are: **`smart-mirror`** (for MM cont
 The following icons will appear, depending on the operating *mode* it's in:
 
 
-| Normal `Listening` | Magic Mirror `Control` | `Google Assistant` | `Alexa` | `Error` |
-|:------------------:|:----------------------:|:------------------:|:-------:|:-------:| 
+| Normal `Listening` | Magic Mirror `Control` | `Google Assistant` | `Amazon Alexa` | `Error` |
+|:------------------:|:----------------------:|:------------------:|:--------------:|:-------:| 
 | ![Full](./images/Assistant_1.png) | ![Full](./images/Assistant_MM.png) | ![Full](./images/Assistant_GA.png) | ![Full](./images/Assistant_AA_bw.png) | ![Full](./images/Assistant_ProcError.png) |
 
 
@@ -54,6 +54,7 @@ There are 5 parts to the installation:
 
 **(0) To Update your OS**
 
+You should always use the **full** (not `Lite`) version of the Raspbian OS, if you are running on a Raspberry Pi.
 The current Raspbian OS version is: `Stretch (9.4)`. You can find your version with:
 
 ```bash
@@ -79,7 +80,7 @@ They are currently:
 # Check the nodejs and npm versions
 node -v && npm -v
 
-v9.8.0
+v9.10.1
 5.8.0
 ```
 
@@ -99,7 +100,7 @@ sudo apt-get install libmagic-dev libatlas-base-dev libasound2-dev sox libsox-fm
 cd ~/MagicMirror/modules
 git clone https://github.com/eouia/MMM-Assistant.git
 cd MMM-Assistant
-npm install
+date; time npm install         # ~8 min, ~705 packages
 ```
 
 **(4) Setting up the API Accounts**
@@ -115,27 +116,35 @@ proceed to the post installation below.
 
 ```bash
 cd ~/MagicMirror/modules/MMM-Assistant/
-npm install --save-dev electron-rebuild 
+npm install --save-dev electron-rebuild             # ~65 sec
 # Do not use the deprecated: --pre-gyp-fix
-./node_modules/.bin/electron-rebuild
+date; time ./node_modules/.bin/electron-rebuild     # ~25-42 min
 ```
 
-This step will take a very long time, as it need to manually compile the [gRPC](https://github.com/grpc/grpc) dependency.  
+The last step will take a very long time, as it need to manually compile the [gRPC](https://github.com/grpc/grpc) dependency.  
 There is also a [node/npm gprc](https://www.npmjs.com/package/grpc) with the [repo](https://github.com/grpc/grpc-node).  
-:warning: This take about **~25 minutes** on a RPi3, with little or no output. Do not interrupt! :warning:
+:warning: This take at least **~25 minutes** on a RPi3, with little or no output. Do not interrupt! :warning:
 
 
 ---
 
 ### Module Configuration
 
-To configure the Assistant, you need to do the following:
+To configure the Assistant, you must do the following:
 
-1. Add the Module to the global MM `config.js`
-2. Edit ...
+0. Obtain the credentials (as already described above) and add them in the files:
+   - `./assets/secret.json`
+   - `./assets/tokens.js`
+   - `./assets/YOUR_DOWNLOADED_PRIVATE_KEY.json` (The filename you saved the file with.)
+1. Add the Module to the global MM `config.js` by copying the content of the file: `./assets/config.txt`.
+2. Edit the following fields in the config file:
+   - `YOUR_PROJECT_ID`
+   - `YOUR_DOWNLOADED_PRIVATE_KEY.json`
 
 
-Add the module to the MM modules array in the `config/config.js` file by adding the following section.
+---
+
+Add the module to the MM modules array in the `~/MagicMirror/config/config.js` file by adding the following section.
 Here you also need to edit and insert the results you obtained from the Google authorization steps above,
 into the fields marked: `YOUR_PROJECT_ID` and `YOUR_DOWNLOADED_PRIVATE_KEY.json` (a filename). 
 
@@ -147,47 +156,47 @@ into the fields marked: `YOUR_PROJECT_ID` and `YOUR_DOWNLOADED_PRIVATE_KEY.json`
     config: {
         assistant: {
             auth: {
-                keyFilePath: "secret.json",             // REQUIRED (Google Assistant API) -- OAuth2 x509 cert
-                savedTokensPath: "resources/tokens.js"  // REQUIRED (Google Assitant API) -- accesss_token & refresh_token
+                keyFilePath:     "assets/google-client-secret.json", // REQUIRED (Google Assistant API) -- OAuth2 x509 cert
+                savedTokensPath: "assets/google-access-tokens.json"  // REQUIRED (Google Assitant API) -- accesss_token & refresh_token
             },
-            conversation: {                             // GA_SDK_22
-                lang: 'en-US',                          // GA_SDK_22
+            conversation: {
+                lang: 'en-US',
                 audio: {
                     encodingIn: "LINEAR16",             // Default. No need to change.
                     sampleRateOut: 16000                // Default. No need to change.
                 }
-            },                                          // GA_SDK_22
+            },
         },
         snowboy: {
             models: [
                 {
                     file: "resources/smart_mirror.umdl",// This file define your MM wake word. (See doc notes.)
-                    sensitivity: 0.5,
+                    sensitivity: 0.5,                   // 0.5
                     hotwords : "MIRROR"                 // Default model: "MIRROR". (This is not the wake word!)
                 },
                 {
                     file: "resources/snowboy.umdl",     // This file define your GA wake word. (See doc notes.)
-                    sensitivity: 0.5,
+                    sensitivity: 0.5,                   // 0.5
                     hotwords : "ASSISTANT"              // Default model: "ASSISTANT". (This is not the wake word!)
                 }
             ]
         },
         record: {
             threshold: 0,                 // Default. No need to change.
-            verbose:false,                // Deafult: true  -- for checking recording status.
-            recordProgram: 'rec',         // You can use 'rec', 'sox', but we recommend 'arecord'
+            verbose: false,               // Deafult: true  -- for checking recording status.
+            recordProgram: 'rec',         // You can also use 'arecord' or 'sox', but we recommend 'rec'
             silence: 2.0                  // Default. No need to change.
         },
         stt: {
-            auth: [{                      // You can use multiple accounts to save money
-                projectId:'YOUR_PROJECT_ID',                    // REQUIRED (Google Voice API) -- project_id
-                keyFilename: 'YOUR_DOWNLOADED_PRIVATE_KEY.json' // REQUIRED (Google Voice API) -- service_account / private_key
+            auth: [{                                             // You can use multiple accounts to save money
+                projectId:   'YOUR_PROJECT_ID',                  // REQUIRED (Google Voice API) -- project_id
+                keyFilename: './assets/google-private-key.json'  // REQUIRED (Google Voice API) -- service_account / private_key
             }],
             request: {
                 encoding: 'LINEAR16',     // Default. No need to change.
                 sampleRateHertz: 16000,   // Default. No need to change.
                 languageCode: 'en-US'     // [en-US]  To set the default GA speech request language.
-                                          // (See: https://cloud.google.com/speech/docs/languages)
+                                          // See: https://cloud.google.com/speech/docs/languages
             },
         },
         speak: {
@@ -202,8 +211,9 @@ into the fields marked: `YOUR_PROJECT_ID` and `YOUR_DOWNLOADED_PRIVATE_KEY.json`
 
 ```
 
-The main difference with this **full** configuration from the [simple]() one, is that it 
-uses the `rec` *vox* wrapper for recording, rather than `arecord` since it works better. 
+The main difference with this **full** configuration from the 
+[simple](https://github.com/eouia/MMM-Assistant/wiki#simple-version) one, 
+is that it uses the `rec` *vox* wrapper for recording, rather than `arecord` since it works better.  
 You can change this configuration later when you see that it works.
 
 ---
@@ -212,7 +222,7 @@ You can change this configuration later when you see that it works.
 
 | Command | Who? | Description |
 |:------- |:---- |:----------- |
-| **`snowboy`** | GA   | The Google Assitant wake word |
+| **`snowboy`** | GA   | The *Google Assistant* wake word |
 | **`smart-mirror`** | MM | The Magic Mirror *command mode* wake word |
 | - | - | - |
 | help *`command`* | MM | Explain help about a specific *`command`* | 
@@ -224,8 +234,6 @@ You can change this configuration later when you see that it works.
 | reboot | MM | Reboot your RPi | 
 | shut down | MM | Shut down your RPi | 
 
-
-*WIP - More TBA*
 
 
 ---
@@ -274,7 +282,7 @@ For detailed information, See the [Wiki](https://github.com/eouia/MMM-Assistant/
 
 #### Contribution
 
-Feel free to post issues and PR's related to this module.  
+Feel free to post issues and PR's related to this module. 
 For all other or general questions, please refer to the [MagicMirror Forum](https://forum.magicmirror.builders/).
 
 #### Credits
@@ -282,10 +290,10 @@ For all other or general questions, please refer to the [MagicMirror Forum](http
 Most grateful thanks to:
 * [---](https://github.com/---/) - for clarifying and fixing XXXX
 
+---
 
 #### License
 
-[![GitHub
-license](https://img.shields.io/github/license/eouia/MMM-Assistant.svg)](https://github.com/eouia/MMM-Assistant/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/eouia/MMM-Assistant.svg)](https://github.com/eouia/MMM-Assistant/blob/master/LICENSE)
 
-(MIT)
+A license to :sparkling_heart:!

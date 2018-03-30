@@ -3,8 +3,8 @@
  * FileName:     MMM-Assistant.js
  * Author:       eouia
  * License:      MIT
- * Date:         2018-03-27
- * Version:      1.0.2
+ * Date:         2018-03-31
+ * Version:      1.0.3
  * Description:  A MagicMirror module to control your modules
  * Format:       4-space TAB's (no TAB chars), mixed quotes
  *
@@ -31,22 +31,24 @@ Module.register("MMM-Assistant",
   {
   defaults: {
     system: {
-      readAlert : true,                             // Reserved: for ??
-      commandRecognition: 'google-cloud-speech',    // Reserved: for 'google-assistant'
-      commandSpeak: 'pico',                         // Reserved: for 'google-translate'
+      readAlert:          true,                   // Reserved: for ??
+      commandRecognition: 'google-cloud-speech',  // Reserved: for 'google-assistant'
+      commandSpeak:       'pico',                 // Reserved: for 'google-translate'
     },
     assistant: {
         auth: {
-            keyFilePath: "secret.json",
-            savedTokensPath: "resources/tokens.js"
+            keyFilePath:     "assets/google-client-secret.json",
+            savedTokensPath: "assets/google-access-tokens.json"
+//            keyFilePath:     "assets/secret.json",
+//            savedTokensPath: "assets/tokens.json"
         },
-        conversation: {             // GA_SDK_22
-            lang: 'en-US',          // GA_SDK_22
+        conversation: {
+            lang: 'en-US',
             audio: {
                 encodingIn: "LINEAR16",
                 sampleRateOut: 16000
             }
-        },                          // GA_SDK_22
+        },
     },
     snowboy: {
       models: [
@@ -65,13 +67,13 @@ Module.register("MMM-Assistant",
     record: {
       threshold: 0,
       verbose:false,
-      recordProgram: 'arecord',
+      recordProgram: 'arecord',     // alternatively use "rec" (a vox wrapper)
       silence: 2.0
     },
     stt: {
       auth: [{
         projectId: '',              // ProjectId from Google Console
-        keyFilename: ''             // 
+        keyFilename: ''             // YOUR_DOWNLOADED_PRIVATE_KEY.json --> ./assets/google-private-key.json
       }],
       request: {
         encoding: 'LINEAR16',
@@ -83,11 +85,7 @@ Module.register("MMM-Assistant",
       useAlert: true,
       language: 'en-US',
     },
-    alias: [
-      {
-        "help :command" : ["teach me :command", "what is :command"]
-      }
-    ]
+    alias: [{  "help :command" : ["teach me :command", "what is :command"]  }]
   },
 
   start: function() {
@@ -95,10 +93,7 @@ Module.register("MMM-Assistant",
     this.commands = []
     this.status = "START"
     this.config = this.configAssignment({}, this.defaults, this.config)
-    this.getCommands(
-      new AssistantCommandRegister(this, this.registerCommand.bind(this))
-    )
-
+    this.getCommands( new AssistantCommandRegister(this, this.registerCommand.bind(this)) )
     this.isAlreadyInitialized = 0
     this.sendSocketNotification('CONFIG', this.config)
   },
@@ -361,10 +356,7 @@ Module.register("MMM-Assistant",
         MM.getModules().enumerate((m) => {
           if (m.name !== 'MMM-Assistant') {
             if (typeof m.getCommands == 'function') {
-              var tc = m.getCommands(new AssistantCommandRegister(
-                m,
-                this.registerCommand.bind(this)
-              ))
+              var tc = m.getCommands(new AssistantCommandRegister(m, this.registerCommand.bind(this) ))
               if (Array.isArray(tc)) {
                 tc.forEach((c)=>{
                   this.registerCommand(m, c)
@@ -445,6 +437,7 @@ Module.register("MMM-Assistant",
           }
         }
         this.updateDom()
+        // E3V3A: No break here?
     }
   },
 
@@ -531,20 +524,17 @@ Module.register("MMM-Assistant",
   },
 
   response: function(text, originalCommand, option) {
-    this.sendSocketNotification('SPEAK', {text:text, option:option, originalCommand:originalCommand})
+    this.sendSocketNotification('SPEAK', {text:text, option:option, originalCommand:originalCommand} )
     this.status = 'SPEAK'
   },
 
   loadCSS: function() {
-    var css = [
-      {
-        id:'materialDesignIcons',
+    var css = [{
+        id:   'materialDesignIcons',
         href: 'https://cdn.materialdesignicons.com/2.0.46/css/materialdesignicons.min.css',
-      },
-    ]
+    }]
     css.forEach(function(c) {
-      if (!document.getElementById(c.id))
-      {
+      if (!document.getElementById(c.id)) {
         var head  = document.getElementsByTagName('head')[0]
         var link  = document.createElement('link')
         link.id   = c.id
@@ -595,7 +585,7 @@ function AssistantCommandRegister (module, registerCallback) {
   this.registerCallback = registerCallback
 }
 
-AssistantCommandRegister.prototype.add = function (commandObj) {
+AssistantCommandRegister.prototype.add = function(commandObj) {
   this.registerCallback(this.module, commandObj)
 }
 
@@ -612,9 +602,7 @@ AssistantHandler.prototype.response = function(text, opts) {
 AssistantHandler.prototype.say = function(type, text, opts) {
   //for compatibility with MMM-TelegramBot
   var msg = "UNSPEAKABLE"
-  if (type == 'TEXT') {
-    msg = text
-  }
+  if (type == 'TEXT') { msg = text; }
   this.response(msg, opts)
 }
 

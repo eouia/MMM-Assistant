@@ -10,14 +10,17 @@ const config = {
   },
 }
 
-const assistant = new GoogleAssistant(config, "MagicMirror")
+// Not sure if this additional parameter is needed...
+//const assistant = new GoogleAssistant(config, "MagicMirror")
+const assistant = new GoogleAssistant(config)
 assistant
   .on('ready', () => {
     assistant.start();
   })
   .on('started', function() {
-    console.log("Google Authentication is finished. Press Ctrl+C for quit.")
+    console.log("Google Authentication is finished. Press CTRL+C to Quit.")
   })
   .on('error', (error) => {
     console.log('Assistant Error:', error)
   })
+
