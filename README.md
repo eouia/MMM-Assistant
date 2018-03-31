@@ -146,7 +146,7 @@ To configure the Assistant, you must do the following:
 
 Add the module to the MM modules array in the `~/MagicMirror/config/config.js` file by adding the following section.
 Here you also need to edit and insert the results you obtained from the Google authorization steps above,
-into the fields marked: `YOUR_PROJECT_ID` and `YOUR_DOWNLOADED_PRIVATE_KEY.json` (a filename). 
+into the fields marked: `YOUR_PROJECT_ID` ~~and `YOUR_DOWNLOADED_PRIVATE_KEY.json` (a filename)~~. 
 
 
 ```javascript
@@ -170,14 +170,14 @@ into the fields marked: `YOUR_PROJECT_ID` and `YOUR_DOWNLOADED_PRIVATE_KEY.json`
         snowboy: {
             models: [
                 {
-                    file: "resources/smart_mirror.umdl",// This file define your MM wake word. (See doc notes.)
-                    sensitivity: 0.5,                   // 0.5
-                    hotwords : "MIRROR"                 // Default model: "MIRROR". (This is not the wake word!)
+                    hotwords : "MIRROR"                           // Default model: "MIRROR". (This is not the wake word!)
+                    file: "resources/u-models/smart_mirror.umdl", // This file define your MM wake word. (See doc notes.)
+                    sensitivity: 0.5,                             // 0.5
                 },
                 {
-                    file: "resources/snowboy.umdl",     // This file define your GA wake word. (See doc notes.)
-                    sensitivity: 0.5,                   // 0.5
-                    hotwords : "ASSISTANT"              // Default model: "ASSISTANT". (This is not the wake word!)
+                    hotwords : "ASSISTANT"                        // Default model: "ASSISTANT". (This is not the wake word!)
+                    file: "resources/u-models/snowboy.umdl",      // This file define your GA wake word. (See doc notes.)
+                    sensitivity: 0.5,                             // 0.5
                 }
             ]
         },
