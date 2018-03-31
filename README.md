@@ -34,7 +34,7 @@ The following icons will appear, depending on the operating *mode* it's in:
 
 | Normal `Listening` | Magic Mirror `Control` | `Google Assistant` | `Amazon Alexa` | `Error` |
 |:------------------:|:----------------------:|:------------------:|:--------------:|:-------:| 
-| ![Full](./images/Assistant_1.png) | ![Full](./images/Assistant_MM.png) | ![Full](./images/Assistant_GA.png) | ![Full](./images/Assistant_AA_bw.png) | ![Full](./images/Assistant_ProcError.png) |
+| ![Full](./images/Assistant_1.png) | ![Full](./images/Assistant_MM.png) | ![Full](./images/Assistant_GA.png) | ![Full](./images/Assistant_AA.png) | ![Full](./images/Assistant_ProcError.png) |
 
 
 ---

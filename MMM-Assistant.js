@@ -53,14 +53,14 @@ Module.register("MMM-Assistant",
     snowboy: {
       models: [
         {
-          file: "resources/smart_mirror.umdl",
-          sensitivity: 0.5,
-          hotwords : "MIRROR"
+          hotwords : "MIRROR",
+          file: "resources/u-models/smart_mirror.umdl",
+          sensitivity: 0.5
         },
         {
-          file: "resources/snowboy.umdl",
-          sensitivity: 0.5,
-          hotwords : "ASSISTANT"
+          hotwords : "ASSISTANT",
+          file: "resources/u-models/snowboy.umdl",
+          sensitivity: 0.5
         }
       ]
     },
@@ -162,6 +162,10 @@ Module.register("MMM-Assistant",
     }
   },
 
+  //=========================================================================
+  //  Begin COMMAND functions
+  //=========================================================================
+
   cmd_asstnt_reboot : function (command, handler) {
     var text = ""
     this.sendSocketNotification('REBOOT')
@@ -179,18 +183,14 @@ Module.register("MMM-Assistant",
   cmd_asstnt_hideall : function (command, handler) {
     var text = this.translate("CMD_HIDE_ALL_MODULES_RESULT")
     var lockString = this.name
-    MM.getModules().enumerate((m)=> {
-      m.hide(0, {lockString:lockString})
-    })
+    MM.getModules().enumerate( (m)=> { m.hide(0, {lockString:lockString}) })
     handler.response(text)
   },
 
   cmd_asstnt_showall : function (command, handler) {
     var text = this.translate("CMD_SHOW_ALL_MODULES_RESULT")
     var lockString = this.name
-    MM.getModules().enumerate((m)=> {
-      m.show(0, {lockString:lockString})
-    })
+    MM.getModules().enumerate( (m)=> { m.show(0, {lockString:lockString}) })
     handler.response(text)
   },
 
@@ -248,6 +248,10 @@ Module.register("MMM-Assistant",
     }
     handler.response(text)
   },
+  //-------------------------------------------------------------------------
+  //  End COMMAND functions
+  //-------------------------------------------------------------------------
+
 
   registerCommand: function(module, commandObj) {
     var c = commandObj
@@ -622,3 +626,4 @@ class ASTMessage {
     this.class = 'Assistant'
   }
 }
+

@@ -1,5 +1,6 @@
 {
     module: 'MMM-Assistant',
+    disabled: false,
     position: 'bottom_left',
     config: {
         assistant: {
