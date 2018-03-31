@@ -122,8 +122,8 @@ date; time ./node_modules/.bin/electron-rebuild     # ~25-42 min
 ```
 
 The last step will take a very long time, as it need to manually compile the [gRPC](https://github.com/grpc/grpc) dependency.  
-There is also a [node/npm gprc](https://www.npmjs.com/package/grpc) with the [repo](https://github.com/grpc/grpc-node).  
 :warning: This take at least **~25 minutes** on a RPi3, with little or no output. Do not interrupt! :warning:
+
 
 
 ---
@@ -133,13 +133,13 @@ There is also a [node/npm gprc](https://www.npmjs.com/package/grpc) with the [re
 To configure the Assistant, you must do the following:
 
 0. Obtain the credentials (as already described above) and add them in the files:
-   - `./assets/secret.json`
-   - `./assets/tokens.js`
-   - `./assets/YOUR_DOWNLOADED_PRIVATE_KEY.json` (The filename you saved the file with.)
+   - `./assets/google-client-secret.json`
+   - `./assets/google-access-tokens.json`
+   - `./assets/google-private-key.json`   (The OAuth2 certificate file you downloaded and saved.)
 1. Add the Module to the global MM `config.js` by copying the content of the file: `./assets/config.txt`.
 2. Edit the following fields in the config file:
    - `YOUR_PROJECT_ID`
-   - `YOUR_DOWNLOADED_PRIVATE_KEY.json`
+   - ~~`YOUR_DOWNLOADED_PRIVATE_KEY.json`~~ 
 
 
 ---
@@ -189,7 +189,7 @@ into the fields marked: `YOUR_PROJECT_ID` and `YOUR_DOWNLOADED_PRIVATE_KEY.json`
         },
         stt: {
             auth: [{                                             // You can use multiple accounts to save money
-                projectId:   'YOUR_PROJECT_ID',                  // REQUIRED (Google Voice API) -- project_id
+                projectId:   'YOUR_PROJECT_ID',                  // REQUIRED (Google Voice API) -- project_id (also shown in key file)
                 keyFilename: './assets/google-private-key.json'  // REQUIRED (Google Voice API) -- service_account / private_key
             }],
             request: {

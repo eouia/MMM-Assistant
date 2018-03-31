@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 
-#### [1.0.3] - 2018-03-30
+#### [1.0.3] - 2018-03-31
 
 - Fixed #35 for new GA SDK v0.2.2
 - Updated response icons in README
