@@ -32,11 +32,13 @@ var NodeHelper = require("node_helper")
 module.exports = NodeHelper.create({
 
   start: function () {
+    console.log(this.name + " started");
     this.config = {}
     this.status = 'NOTACTIVATED'
     this.commandAuthIndex = 0
     this.commandAuthMax = 0
     this.pause = new Set()
+    this.googleRequestCounter = 1      // Added by E3V3A for Request Count function
   },
 
   initialize: function (config) {
@@ -44,7 +46,6 @@ module.exports = NodeHelper.create({
     this.config.assistant.auth.keyFilePath     = path.resolve(__dirname, this.config.assistant.auth.keyFilePath)
     this.config.assistant.auth.savedTokensPath = path.resolve(__dirname, this.config.assistant.auth.savedTokensPath)
     this.commandAuthMax = this.config.stt.auth.length
-
     for(var i=0; i<this.commandAuthMax; i++) {
       this.config.stt.auth[i].keyFilename = path.resolve(__dirname, this.config.stt.auth[i].keyFilename)
     }
@@ -156,32 +157,6 @@ module.exports = NodeHelper.create({
     })
   },
 
-  /*
-  activateSpeak_espeak: function(text) {
-    //@DEPRECATED
-    this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED'})
-    var script = "espeak"
-    script += (
-      (this.config.espeak.language)
-        ? (" -v " + this.config.espeak.language)
-        : ""
-    )
-    script += (
-      (this.config.espeak.speed)
-        ? (" -s " + this.config.espeak.speed)
-        : ""
-    )
-    script += ((this.config.espeak.ssml) ? (" -m") : "")
-    script += " \'" + text + "\'"
-    exec (script, (err, stdout, stderr)=>{
-      if (err == null) {
-        console.log("[ASSTNT] Speak: ", text)
-        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED'})
-      }
-    })
-    if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
-  },
-  */
 
   activateHotword: function() {
     console.log('[ASSTNT] Snowboy Activated')
@@ -237,8 +212,10 @@ module.exports = NodeHelper.create({
   },
 
   activateAssistant: function(mode = 'ASSISTANT') {
+    console.log('[ASSTNT] GA Activated')
+
+    var gRQC = this.googleRequestCounter // Added by E3V3A
     var transcription = ""
-    console.log('[ASSTNT] Assistant Activated')
     this.sendSocketNotification('MODE', {mode:'ASSISTANT_STARTED'})
     const assistant = new GoogleAssistant(this.config.assistant.auth)
 
@@ -249,8 +226,11 @@ module.exports = NodeHelper.create({
       let speakerOpenTime = 0;
       let speakerTimer;
 
-      // Much of this is based on: ./node_modules/google-assistant/examples/speaker-helper.js
+      // This is based on:
+      //    ./node_modules/google-assistant/examples/mic-speaker.js
+      //    ./node_modules/google-assistant/examples/speaker-helper.js
       conversation
+        // send the audio buffer to the speaker
         .on('audio-data', (data) => {
           //record.stop()
           const now = new Date().getTime()
@@ -266,19 +246,38 @@ module.exports = NodeHelper.create({
             speaker.end()
           }
         })
-        .on('end-of-utterance', () => {
-          record.stop()
-        })
+        // done speaking, close the mic
+        .on('end-of-utterance', () => { record.stop() })
+        // show each word on console as they are understood, while we say it
         .on('transcription', (text) => {
             this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
             transcription = text
-            console.log("[ASSTNT] GA Transcription: ", transcription)
+            //console.log("[VOX] GA Transcription: ", transcription)  // show entire JS object
+            //---------------------------------------------------------------
+            // For account/billing purposes:
+            // We check if the transcription is complete and update the request
+            // counter by looking for: "done: true". This should probably be
+            // moved to MMM-Assistant.
+            //---------------------------------------------------------------
+            if (text.done)  {
+                gRQC += 1
+                console.log("[VOX] GA Transcription: ", text.transcription)
+                console.log("[VOX] GA RQC: ", gRQC)
+            }
+            //---------------------------------------------------------------
             //record.stop()
             if (mode == 'COMMAND') {
-              console.log("[ASSTNT] Command recognized:",transcription)
-              this.sendSocketNotification('COMMAND',transcription)
+              console.log("[ASSTNT] Command understood as: ", transcription)
+              this.sendSocketNotification('COMMAND', transcription)
             }
         })
+        // what the assistant answered
+        .on('response', text => console.log('[VOX] GA Response: ', text))
+        // if we've requested a volume level change, get the percentage of the new level
+        .on('volume-percent', percent => console.log('[VOX] Set Volume [%]: ', percent))
+        // the device needs to complete an action
+        //.on('device-action', action => console.log('[VOX] Action:', action))
+        // once the conversation is ended, see if we need to follow up
         .on('ended', (error, continueConversation) => {
           if (this.pause.size > 0) {
             record.stop()
@@ -322,7 +321,7 @@ module.exports = NodeHelper.create({
         .on('close', () => { conversation.end(); });
     };
 
-    // Setup the Assistant
+    // Setup the assistant
     assistant
       .on('ready', () => { assistant.start(this.config.assistant.conversation) })
       .on('started', startConversation)
@@ -375,6 +374,10 @@ module.exports = NodeHelper.create({
   }
 })
 
+//---------------------------------------------------------------------------
+//  Helper Functions
+//---------------------------------------------------------------------------
 function execute(command, callback){
   exec(command, function(error, stdout, stderr){ callback(stdout); });
 }
+
