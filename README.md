@@ -162,8 +162,8 @@ into the fields marked: `YOUR_PROJECT_ID` ~~and `YOUR_DOWNLOADED_PRIVATE_KEY.jso
             conversation: {
                 lang: 'en-US',
                 audio: {
-                    encodingIn: "LINEAR16",             // Default. No need to change.
-                    sampleRateOut: 16000                // Default. No need to change.
+                    encodingIn: "LINEAR16",  // Default. No need to change.
+                    sampleRateOut: 16000     // Default. No need to change.
                 }
             },
         },
@@ -183,7 +183,7 @@ into the fields marked: `YOUR_PROJECT_ID` ~~and `YOUR_DOWNLOADED_PRIVATE_KEY.jso
         },
         record: {
             threshold: 0,                 // Default. No need to change.
-            verbose: false,               // Deafult: true  -- for checking recording status.
+            verbose: false,               // Default: true  -- for checking recording status.
             recordProgram: 'rec',         // You can also use 'arecord' or 'sox', but we recommend 'rec'
             silence: 2.0                  // Default. No need to change.
         },

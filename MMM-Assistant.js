@@ -3,7 +3,7 @@
  * FileName:     MMM-Assistant.js
  * Author:       eouia
  * License:      MIT
- * Date:         2018-03-31
+ * Date:         2018-04-01
  * Version:      1.0.3
  * Description:  A MagicMirror module to control your modules
  * Format:       4-space TAB's (no TAB chars), mixed quotes
@@ -37,10 +37,8 @@ Module.register("MMM-Assistant",
     },
     assistant: {
         auth: {
-            keyFilePath:     "assets/google-client-secret.json",
-            savedTokensPath: "assets/google-access-tokens.json"
-//            keyFilePath:     "assets/secret.json",
-//            savedTokensPath: "assets/tokens.json"
+            keyFilePath:     "assets/google-client-secret.json",    // "assets/secret.json"
+            savedTokensPath: "assets/google-access-tokens.json"     // "assets/tokens.json"
         },
         conversation: {
             lang: 'en-US',
