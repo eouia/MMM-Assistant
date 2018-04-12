@@ -3,7 +3,7 @@
 //===========================================================================
 //  Author:         E:V:A
 //  File:           google-auth.js
-//  Date:           2018-03-31
+//  Date:           2018-04-12
 //  Description:    A node script to obtain the Google Voice API accesstokens
 //---------------------------------------------------------------------------
 //  This script use:
@@ -16,21 +16,22 @@ const GoogleAssistant = require('google-assistant')
 const path = require('path')
 
 const config = {
-  auth: {
-    keyFilePath: path.resolve(__dirname,     '../assets/google-client-secret.json'), // secret.json
-    savedTokensPath: path.resolve(__dirname, '../assets/google-access-tokens.json'), // resources/tokens.js
-  },
+    auth: {
+        keyFilePath: path.resolve(__dirname,     '../assets/google-client-secret.json'), // secret.json
+        savedTokensPath: path.resolve(__dirname, '../assets/google-access-tokens.json'), // resources/tokens.js
+    },
 }
 
-// Not sure if this additional parameter is needed...
-//const assistant = new GoogleAssistant(config, "MagicMirror")
-const assistant = new GoogleAssistant(config)
+const assistant = new GoogleAssistant(config.auth)
+// Not sure if this additional parameter is needed... but it was suggested somewhere.
+//const assistant = new GoogleAssistant(config.auth, "MagicMirror")
 assistant
   .on('ready', () => {
     assistant.start();
   })
   .on('started', function() {
     console.log("Google Authentication OK! Press CTRL+C to Quit.")
+    //process.exit(1) //return //throw new Error("GA Authenticatin OK.")
   })
   .on('error', (error) => {
     console.log('Google Authentication Error:', error)
