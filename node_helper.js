@@ -95,6 +95,11 @@ module.exports = NodeHelper.create({
           if(this.pause.size == 0) this.activateSpeak(payload.text, payload.option, payload.originalCommand)
         }
         break
+      case 'EXECUTE':
+        execute(payload, function(callback) {
+          console.log(callback)
+        })
+        break
       case 'REBOOT':
         execute('sudo reboot now', function(callback) {
           console.log(callback)
@@ -202,7 +207,7 @@ module.exports = NodeHelper.create({
     detector.on('hotword', (index, hotword, buffer)=>{
       record.stop()
       new Sound(path.resolve(__dirname, 'resources/dong.wav')).play()
-      this.sendSocketNotification('HOTWORD_DETECTED', hotword)
+      this.sendSocketNotification('HOTWORD_DETECTED', {hotword:hotword, index:index})
       this.sendSocketNotification('MODE', {mode:'HOTWORD_DETECTED'})
       if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
       return
