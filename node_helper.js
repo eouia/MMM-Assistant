@@ -95,7 +95,13 @@ module.exports = NodeHelper.create({
           if(this.pause.size == 0) this.activateSpeak(payload.text, payload.option, payload.originalCommand)
         }
         break
+      case 'NOTIFY':
+        this.status = 'HOTWORD_DETECTED'
+        this.sendSocketNotification("HOTWORD_STANDBY")
+        break
       case 'EXECUTE':
+        this.status = 'HOTWORD_DETECTED'
+        this.sendSocketNotification("HOTWORD_STANDBY")
         execute(payload, function(callback) {
           console.log(callback)
         })
@@ -206,7 +212,8 @@ module.exports = NodeHelper.create({
 
     detector.on('hotword', (index, hotword, buffer)=>{
       record.stop()
-      new Sound(path.resolve(__dirname, 'resources/dong.wav')).play()
+      var ding = (typeof this.config.snowboy.models[index-1].ding !== 'undefined') ?  this.config.snowboy.models[index-1].ding : 'resources/dong.wav'
+      new Sound(path.resolve(__dirname, ding)).play()
       this.sendSocketNotification('HOTWORD_DETECTED', {hotword:hotword, index:index})
       this.sendSocketNotification('MODE', {mode:'HOTWORD_DETECTED'})
       if (this.pause.size > 0) this.sendSocketNotification('PAUSED')

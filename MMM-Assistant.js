@@ -413,7 +413,7 @@ Module.register("MMM-Assistant",
       case 'ERROR':
         this.status = "ERROR"
         console.log("[ASSTNT] Error:", payload)
-        //this.sendSocketNotification("HOTWORD_STANDBY")
+        this.sendSocketNotification("HOTWORD_STANDBY")
         break
       case 'MODE':
         this.status = payload.mode
@@ -455,11 +455,10 @@ Module.register("MMM-Assistant",
     // Start snowboy hotword activated shell command
     } else if (type.hotword == 'EXECUTE') {
       this.sendSocketNotification('EXECUTE', this.config.snowboy.models[type.index-1].parameter)
-      this.sendSocketNotification('SPEAK', {text: ''}) // kludge, don't know how else to get back to listening
     // Send snowboy hotword activated notification to all modules
-    }  else if (type.hotword == 'NOTIFY') {
-      this.sendSocketNotification('SPEAK', {text: this.config.snowboy.models[type.index-1].parameter}) // kludge, don't know how else to get back to listening
-      this.sendNotification(this.config.snowboy.models[type.index-1].parameter)
+    } else if (type.hotword == 'NOTIFY') {
+      this.sendSocketNotification('NOTIFY')
+      this.sendNotification(this.config.snowboy.models[type.index-1].notification, this.config.snowboy.models[type.index-1].parameter)
     }
   },
 
