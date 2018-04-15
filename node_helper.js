@@ -232,31 +232,24 @@ module.exports = NodeHelper.create({
     const assistant = new GoogleAssistant(this.config.assistant.auth)
 
     const startConversation = (conversation) => {
-      //console.log('Say something!');
-
       let spokenResponseLength = 0;
       let speakerOpenTime = 0;
       let speakerTimer;
+      let openMicAgain = false;
 
-      // This is based on:
-      //    ./node_modules/google-assistant/examples/mic-speaker.js
-      //    ./node_modules/google-assistant/examples/speaker-helper.js
       conversation
         // send the audio buffer to the speaker
         .on('audio-data', (data) => {
-          //record.stop()
-          const now = new Date().getTime()
-          if (mode == 'ASSISTANT') {
-            this.sendSocketNotification('MODE', {mode:'ASSISTANT_SPEAKING'})
-            speaker.write(data);
-            spokenResponseLength += data.length;
-            const audioTime = spokenResponseLength / (this.config.assistant.conversation.audio.sampleRateOut * 16 / 8) * 1000;
-            clearTimeout(speakerTimer);
-            speakerTimer = setTimeout(() => { speaker.end(); }, audioTime - Math.max(0, now - speakerOpenTime));
-          } else {
-            //record.stop()
-            speaker.end()
-          }
+		  const now = new Date().getTime();
+		  speaker.write(data);
+
+		  // kill the speaker after enough data has been sent to it and then let it flush out
+		  spokenResponseLength += data.length;
+		  const audioTime = spokenResponseLength / (24000 * 16 / 8) * 1000;
+		  clearTimeout(speakerTimer);
+		  speakerTimer = setTimeout(() => {
+			speaker.end();
+		  }, audioTime - Math.max(0, now - speakerOpenTime));
         })
         // done speaking, close the mic
         .on('end-of-utterance', () => { record.stop() })
@@ -264,50 +257,27 @@ module.exports = NodeHelper.create({
         .on('transcription', (text) => {
             this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
             transcription = text
-            //console.log("[VOX] GA Transcription: ", transcription)  // show entire JS object
-            //---------------------------------------------------------------
-            // For account/billing purposes:
-            // We check if the transcription is complete and update the request
-            // counter by looking for: "done: true". This should probably be
-            // moved to MMM-Assistant.
-            //---------------------------------------------------------------
             if (text.done)  {
                 gRQC += 1
                 console.log("[VOX] GA Transcription: ", text.transcription)
                 console.log("[VOX] GA RQC: ", gRQC)
             }
             //---------------------------------------------------------------
-            //record.stop()
-            if (mode == 'COMMAND') {
-              console.log("[ASSTNT] Command understood as: ", transcription)
-              this.sendSocketNotification('COMMAND', transcription)
-            }
         })
         // what the assistant answered
         .on('response', text => console.log('[VOX] GA Response: ', text))
         // if we've requested a volume level change, get the percentage of the new level
         .on('volume-percent', percent => console.log('[VOX] Set Volume [%]: ', percent))
         // the device needs to complete an action
-        //.on('device-action', action => console.log('[VOX] Action:', action))
+        .on('device-action', action => console.log('[VOX] Action:', action))
         // once the conversation is ended, see if we need to follow up
         .on('ended', (error, continueConversation) => {
-          if (this.pause.size > 0) {
-            record.stop()
-            speaker.end()
-            this.sendSocketNotification('PAUSED')
-            return
-          }
           if (error) {
             console.log('[ASSTNT] Conversation Ended Error:', error)
             this.sendSocketNotification('ERROR', 'CONVERSATION ENDED')
           } else if (continueConversation) {
-            if (mode == 'ASSISTANT') {
-              assistant.start()
-            } else {
-              //@.@ What? There is no stop-conversation in gRpc ?????
-            }
+            openMicAgain = true;
           } else {
-            record.stop()
             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
           }
         })
@@ -316,7 +286,6 @@ module.exports = NodeHelper.create({
           record.stop()
           speaker.end() // Added by E3V3A: fix attempt for issue #25 --> Need to check for: "Error: Service unavailable"
           this.sendSocketNotification('ERROR', 'CONVERSATION')
-          return // added by E3V3A: Do we also need a return?
         })
 
       // pass the mic audio to the assistant
@@ -329,8 +298,12 @@ module.exports = NodeHelper.create({
         sampleRate: this.config.assistant.conversation.audio.sampleRateOut,
       });
       speaker
-        .on('open', () => { speakerOpenTime = new Date().getTime(); })
-        .on('close', () => { conversation.end(); });
+        .on('open', () => { 
+		  clearTimeout(speakerTimer);
+		  spokenResponseLength = 0;
+		  speakerOpenTime = new Date().getTime();
+		})
+        .on('close', () => { if (openMicAgain) assistant.start(this.config.assistant.conversation); });
     };
 
     // Setup the assistant
