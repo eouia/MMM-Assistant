@@ -2,7 +2,7 @@
 
 [![MagicMirror2](https://img.shields.io/badge/MagicMirror-2.2.2-lightgray.svg)](https://github.com/MichMich/MagicMirror)
 [![DocStatus](https://inch-ci.org/github/eouia/MMM-Assistant.svg?branch=master)](https://inch-ci.org/github/eouia/MMM-Assistant)
-[![GitHub last commit](https://img.shields.io/github/last-commit/eouia/MMM-Assistant.svg)](https://github.com/eouia/MMM-Assistant)
+[![GitHub last commit](https://img.shields.io/github/last-commit/drftg/MMM-Assistant.svg)](https://github.com/eouia/MMM-Assistant)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/eouia/MMM-Assistant/graphs/commit-activity)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/eouia/MMM-Assistant.svg)](http://isitmaintained.com/project/eouia/MMM-Assistant "Average time to resolve an issue")
 [![Dependency Status](https://beta.gemnasium.com/badges/github.com/eouia/MMM-Assistant.svg)](https://beta.gemnasium.com/projects/github.com/eouia/MMM-Assistant)
