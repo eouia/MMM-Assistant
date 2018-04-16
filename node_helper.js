@@ -232,11 +232,16 @@ module.exports = NodeHelper.create({
     const assistant = new GoogleAssistant(this.config.assistant.auth)
 
     const startConversation = (conversation) => {
+      //console.log('Say something!');
+
       let spokenResponseLength = 0;
       let speakerOpenTime = 0;
       let speakerTimer;
       let openMicAgain = false;
 
+      // This is based on:
+      //    ./node_modules/google-assistant/examples/mic-speaker.js
+      //    ./node_modules/google-assistant/examples/speaker-helper.js
       conversation
         // send the audio buffer to the speaker
         .on('audio-data', (data) => {
@@ -257,6 +262,13 @@ module.exports = NodeHelper.create({
         .on('transcription', (text) => {
             this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
             transcription = text
+            //console.log("[VOX] GA Transcription: ", transcription)  // show entire JS object
+            //---------------------------------------------------------------
+            // For account/billing purposes:
+            // We check if the transcription is complete and update the request
+            // counter by looking for: "done: true". This should probably be
+            // moved to MMM-Assistant.
+            //---------------------------------------------------------------
             if (text.done)  {
                 gRQC += 1
                 console.log("[VOX] GA Transcription: ", text.transcription)
@@ -278,6 +290,7 @@ module.exports = NodeHelper.create({
           } else if (continueConversation) {
             openMicAgain = true;
           } else {
+//            record.stop()
             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
           }
         })
@@ -286,6 +299,7 @@ module.exports = NodeHelper.create({
           record.stop()
           speaker.end() // Added by E3V3A: fix attempt for issue #25 --> Need to check for: "Error: Service unavailable"
           this.sendSocketNotification('ERROR', 'CONVERSATION')
+//          return // added by E3V3A: Do we also need a return?
         })
 
       // pass the mic audio to the assistant
