@@ -27,6 +27,12 @@
                     file: "resources/snowboy.umdl",     // This file define your GA wake word. (See doc notes.)
                     sensitivity: 0.5,
                     hotwords : "ASSISTANT"              // Default model: "ASSISTANT". (This is not the wake word!)
+                },
+                {
+                    file: "resources/hello.umdl",// This file define your MM wake word. (See doc notes.)
+                    sensitivity: 0.45,
+                    parameter: 'vcgencmd display_power 1', // monitor on
+                    hotwords : "EXECUTE"
                 }
             ]
         },
