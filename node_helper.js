@@ -96,14 +96,20 @@ module.exports = NodeHelper.create({
         }
         break
       case 'NOTIFY':
-        this.status = 'HOTWORD_DETECTED'
-        this.sendSocketNotification("HOTWORD_STANDBY")
+        if (payload.notification !== "HOTWORD_STANDBY") {
+          if (payload.notification == "PLAY") {
+            new Sound(path.resolve(__dirname, payload.parameter)).play();
+          } else {
+            this.sendSocketNotification("NOTIFY", payload) 
+          }
+        } else {
+          this.status = 'HOTWORD_DETECTED'
+          this.sendSocketNotification("HOTWORD_STANDBY")
+        }
         break
       case 'EXECUTE':
-        this.status = 'HOTWORD_DETECTED'
-        this.sendSocketNotification("HOTWORD_STANDBY")
         execute(payload, function(callback) {
-          console.log(callback)
+          console.log("[EXECUTE] ", callback)
         })
         break
       case 'REBOOT':
@@ -118,6 +124,9 @@ module.exports = NodeHelper.create({
         break
       case 'TEST':
         this.test(payload)
+        break
+      case 'LOG':
+        this.consoleLog(payload)
         break
     }
   },
@@ -168,10 +177,12 @@ module.exports = NodeHelper.create({
     })
   },
 
+  consoleLog: function(payload) {
+    console.log(payload.title, payload.message)
+  },
 
   activateHotword: function() {
     console.log('[ASSTNT] Snowboy Activated')
-
     this.sendSocketNotification('MODE', {mode:'HOTWORD_STARTED'})
     new Sound(path.resolve(__dirname, 'resources/ding.wav')).play();
 
@@ -212,8 +223,8 @@ module.exports = NodeHelper.create({
 
     detector.on('hotword', (index, hotword, buffer)=>{
       record.stop()
-      var ding = (typeof this.config.snowboy.models[index-1].ding !== 'undefined') ?  this.config.snowboy.models[index-1].ding : 'resources/dong.wav'
-      new Sound(path.resolve(__dirname, ding)).play()
+      var confirm = (typeof this.config.snowboy.models[index-1].confirm !== 'undefined') ?  this.config.snowboy.models[index-1].confirm : 'resources/dong.wav'
+      new Sound(path.resolve(__dirname, confirm)).play()
       this.sendSocketNotification('HOTWORD_DETECTED', {hotword:hotword, index:index})
       this.sendSocketNotification('MODE', {mode:'HOTWORD_DETECTED'})
       if (this.pause.size > 0) this.sendSocketNotification('PAUSED')

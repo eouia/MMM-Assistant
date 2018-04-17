@@ -17,28 +17,80 @@
             },
         },
         snowboy: {
+            // major change: every model now starts a list of commands so no more "hotword" parameter
             models: [
                 {
-                    file: "resources/smart_mirror.umdl",// This file define your MM wake word. (See doc notes.)
+                    file: "resources/hello.pmdl", // This file defines your MM wake word. (See doc note$
                     sensitivity: 0.5,
-                    hotwords : "MIRROR"                 // Default model: "MIRROR". (This is not the wake word!)
+                    commands: [
+                      {
+                        notification: "COMMAND",
+                        parameter: "show all modules"
+                      },
+                      {
+                        notification: "COMMAND",
+                        parameter: "turn the screen on"
+                      },
+                    ]
                 },
                 {
-                    file: "resources/snowboy.umdl",     // This file define your GA wake word. (See doc notes.)
+                    file: "resources/u-models/smart_mirror.umdl", // This file defines your MM wake word. (See doc notes.)
                     sensitivity: 0.5,
-                    hotwords : "ASSISTANT"              // Default model: "ASSISTANT". (This is not the wake word!)
+                    commands: [
+                      {
+                        notification: "COMMAND",
+                        parameter: "turn the screen on"
+                      },
+                      {notification: "MIRROR"}  // old hotword
+                    ] 
                 },
                 {
-                    file: "resources/hello.umdl",// This file define your MM wake word. (See doc notes.)
-                    sensitivity: 0.45,
-                    parameter: 'vcgencmd display_power 1', // monitor on
-                    hotwords : "EXECUTE"
+                    file: "resources/u-models/snowboy.umdl",
+                    sensitivity: 0.5,
+                    confirm: "resources/u-hmm-2.wav",
+                    commands: [  // turn the screen on before calling Google Assistant
+                      {
+                        notification: "COMMAND", 
+                        parameter: "turn the screen on" 
+                      },
+                      {notification: "ASSISTANT"},
+		]
+                },
+                {
+                    file: "resources/u-models/alexa.umdl",
+                    sensitivity: 0.5,
+                    commands: [
+                      {
+                        notification: "PLAY", 
+                        parameter: "resources/snowboy.wav" 
+                      },
+                      {
+                        notification: "COMMAND",
+                        parameter: "hide all modules" // any spoken command can be sent as text (see translation/??.json for commands)
+                      },
+                      {
+                        notification: "COMMAND", 
+                        parameter: "show module time" // even module name mapping works (see modulemap below)
+                      },
+                      {
+                        notification: "COMMAND", 
+                        parameter: "turn the screen on" 
+                      },
+                      {
+                        notification: "SHOW_ALERT", // any notification can be sent to other modules
+                        parameter:  {type: "notification", title: "Important message!", message: "we are awake"}
+                      }
+                    ],
                 }
             ]
         },
+        modulemap: [ // this table matches spoken module names to their real name
+          ["time", "clock"],
+          ["assistant", "MMM-Assistant"]
+        ],
         record: {
             threshold: 0,                 // Default. No need to change.
-            verbose: false,               // Deafult: true  -- for checking recording status.
+            verbose: false,               // Default: true  -- for checking recording status.
             recordProgram: 'rec',         // You can use 'arecord', 'sox', but we recommend 'rec'
             silence: 2.0                  // Default. No need to change.
         },

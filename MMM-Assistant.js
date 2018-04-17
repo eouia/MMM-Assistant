@@ -88,6 +88,7 @@ Module.register("MMM-Assistant",
 
   start: function() {
     console.log("[ASSTNT] started!")
+    this.modulemap = new Map(this.config.modulemap)
     this.commands = []
     this.status = "START"
     this.config = this.configAssignment({}, this.defaults, this.config)
@@ -99,6 +100,7 @@ Module.register("MMM-Assistant",
   getTranslations: function() {
     return {
         en: "translations/en.json",
+        nl: "translations/nl.json",
         fr: "translations/fr.json",
     }
   },
@@ -134,9 +136,19 @@ Module.register("MMM-Assistant",
           callback : 'cmd_asstnt_hideall',
         },
         {
+          command: this.translate("CMD_HIDE_MODULE"),
+          description : this.translate("CMD_HIDE_MODULE_DESCRIPTION"),
+          callback : 'cmd_asstnt_hide_module',
+        },
+        {
           command: this.translate("CMD_SHOW_ALL_MODULES"),
           description : this.translate("CMD_SHOW_ALL_MODULES_DESCRIPTION"),
           callback : 'cmd_asstnt_showall',
+        },
+        {
+          command: this.translate("CMD_SHOW_MODULE"),
+          description : this.translate("CMD_SHOW_MODULE_DESCRIPTION"),
+          callback : 'cmd_asstnt_show_module',
         },
         {
           command: this.translate("CMD_SAY"),
@@ -152,6 +164,16 @@ Module.register("MMM-Assistant",
           command: this.translate("CMD_REBOOT"),
           description : this.translate("CMD_REBOOT_DESCRIPTION"),
           callback : 'cmd_asstnt_reboot',
+        },
+        {
+          command: this.translate("CMD_WAKE_UP"),
+          description : this.translate("CMD_WAKE_UP_DESCRIPTION"),
+          callback : 'cmd_asstnt_wakeup',
+        },
+        {
+          command: this.translate("CMD_GOTO_SLEEP"),
+          description : this.translate("CMD_GOTO_SLEEP_DESCRIPTION"),
+          callback : 'cmd_asstnt_gotosleep',
         },
       ]
       commands.forEach((c) => {
@@ -174,6 +196,18 @@ Module.register("MMM-Assistant",
     this.sendSocketNotification('SHUTDOWN')
   },
 
+  cmd_asstnt_wakeup : function (command, handler) {
+    var text = ""
+    this.sendSocketNotification('EXECUTE', "vcgencmd display_power 1")
+    if (this.status !== "COMMAND_MODE") this.sendSocketNotification("HOTWORD_STANDBY")
+  },
+
+  cmd_asstnt_gotosleep : function (command, handler) {
+    var text = ""
+    this.sendSocketNotification('EXECUTE', "vcgencmd display_power 0")
+    if (this.status !== "COMMAND_MODE") this.sendSocketNotification("HOTWORD_STANDBY")
+  },
+
   cmd_asstnt_say : function (command, handler) {
     handler.response(handler.args.something)
   },
@@ -182,14 +216,52 @@ Module.register("MMM-Assistant",
     var text = this.translate("CMD_HIDE_ALL_MODULES_RESULT")
     var lockString = this.name
     MM.getModules().enumerate( (m)=> { m.hide(0, {lockString:lockString}) })
-    handler.response(text)
+    if (this.status !== "COMMAND_MODE") {
+      this.sendSocketNotification("HOTWORD_STANDBY")
+    } else {
+      handler.response(text)
+    }
+  },
+
+  cmd_asstnt_hide_module : function (command, handler) {
+    var text = this.translate("CMD_HIDE_MODULE_RESULT")
+    var lockString = this.name
+    var target = handler.args['module']
+    MM.getModules().forEach( (m)=> {
+      if (m.name == target) {m.hide(0, {lockString:lockString})}
+      else if (m.name == this.modulemap.get(target)) {m.hide(0, {lockString:lockString})}
+    })
+    if (this.status !== "COMMAND_MODE") {
+      this.sendSocketNotification("HOTWORD_STANDBY")
+    } else {
+      handler.response(text)
+    }
   },
 
   cmd_asstnt_showall : function (command, handler) {
     var text = this.translate("CMD_SHOW_ALL_MODULES_RESULT")
     var lockString = this.name
     MM.getModules().enumerate( (m)=> { m.show(0, {lockString:lockString}) })
-    handler.response(text)
+    if (this.status !== "COMMAND_MODE") {
+      this.sendSocketNotification("HOTWORD_STANDBY")
+    } else {
+      handler.response(text)
+    }
+  },
+
+  cmd_asstnt_show_module : function (command, handler) {
+    var text = this.translate("CMD_SHOW_MODULE_RESULT")
+    var lockString = this.name
+    var target = handler.args['module']
+    MM.getModules().forEach( (m)=> {
+      if (m.name == target) {m.show(0, {lockString:lockString})}
+      else if (m.name == this.modulemap.get(target)) {m.show(0, {lockString:lockString})}
+    })
+    if (this.status !== "COMMAND_MODE") {
+      this.sendSocketNotification("HOTWORD_STANDBY")
+    } else {
+      handler.response(text)
+    }
   },
 
   cmd_asstnt_list_commands : function (command, handler) {
@@ -404,11 +476,19 @@ Module.register("MMM-Assistant",
           this.sendSocketNotification("HOTWORD_STANDBY")
         }
         break
+      case 'NOTIFY':
+        this.status = "COMMAND_MODE"
+        if (payload.notification == "COMMAND") {
+          this.parseCommand(payload.parameter, this.sendSocketNotification.bind(this))
+        } else if (payload.notification == "EXECUTE") {
+          this.sendSocketNotification("EXECUTE", payload.parameter)
+        } else {
+          this.sendNotification(payload.notification, payload.parameter)
+        }
+        break
       case 'COMMAND':
-        this.status = "COMMAND";
         console.log("[ASSTNT] Command:", payload)
         this.parseCommand(payload, this.sendSocketNotification.bind(this))
-        //this.sendSocketNotification("HOTWORD_STANDBY")
         break;
       case 'ERROR':
         this.status = "ERROR"
@@ -444,21 +524,25 @@ Module.register("MMM-Assistant",
   },
 
   hotwordDetected : function (type) {
-    // Start Google Assistant
-    if (type.hotword == 'ASSISTANT') {
-      this.sendSocketNotification('ACTIVATE_ASSISTANT')
-      this.status = 'ACTIVATE_ASSISTANT'
-    // Start command mode
-    } else if (type.hotword == 'COMMAND') {
-      this.sendSocketNotification('ACTIVATE_COMMAND')
-      this.status = 'ACTIVATE_COMMAND'
-    // Start snowboy hotword activated shell command
-    } else if (type.hotword == 'EXECUTE') {
-      this.sendSocketNotification('EXECUTE', this.config.snowboy.models[type.index-1].parameter)
-    // Send snowboy hotword activated notification to all modules
-    } else if (type.hotword == 'NOTIFY') {
-      this.sendSocketNotification('NOTIFY')
-      this.sendNotification(this.config.snowboy.models[type.index-1].notification, this.config.snowboy.models[type.index-1].parameter)
+    //  execute commands
+    this.config.snowboy.models[type.index-1].commands.forEach(
+      (command) => {
+        this.sendSocketNotification('LOG', {title: "[Command] ", message: command})
+        if (command.notification == 'ASSISTANT') {
+          this.sendSocketNotification('ACTIVATE_ASSISTANT')
+          this.status = 'ACTIVATE_ASSISTANT'
+        } else if (command.notification == 'MIRROR') {
+          this.status = 'ACTIVATE_COMMAND'
+          this.sendSocketNotification('ACTIVATE_COMMAND')
+        } else {
+          this.status = "COMMAND_MODE"
+          this.sendSocketNotification('NOTIFY', command)
+        }
+      }
+    )
+    // if last command was not a call for assistant or voice command then activate snowboy
+    if (this.status == "COMMAND_MODE") {
+      this.sendSocketNotification("NOTIFY", {notification: "HOTWORD_STANDBY"})
     }
   },
 
@@ -469,7 +553,7 @@ Module.register("MMM-Assistant",
       cb("HOTWORD_STANDBY")
       return
     }
-    var msgText = msg
+    var msgText = msg.toLowerCase()
     var commandFound = 0
     var c
     for(var i in this.commands) {
@@ -534,8 +618,10 @@ Module.register("MMM-Assistant",
   },
 
   response: function(text, originalCommand, option) {
-    this.sendSocketNotification('SPEAK', {text:text, option:option, originalCommand:originalCommand} )
-    this.status = 'SPEAK'
+    if (this.status !== "COMMAND_MODE") {
+      this.sendSocketNotification('SPEAK', {text:text, option:option, originalCommand:originalCommand} )
+      this.status = 'SPEAK'
+    }
   },
 
   loadCSS: function() {
