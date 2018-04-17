@@ -10,6 +10,19 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+#### [1.1.0] - 2018-04-17
+
+- Changed handling of commands in config
+- Changed format of models in config.js so an old one will not work (see: assets/config.txt)
+- Added commands for screen on and off
+- Added commands for showing/hiding a single named module
+- Added mapping of spoken module name to actual module name (really helps non-english speakers)
+- Added command to play .wav
+- Added a single hotword can fire a list of commands and stay in listening mode
+  for example, a spoken "wake up" can turn on the screen (like PIR) without activating GA or voice command
+- Added model specific confirmation sound added in config (parameter "confirm")
+- Added translate/nl.json for dutch language
+
 
 #### [1.0.3] - 2018-03-31
 
