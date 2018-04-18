@@ -173,6 +173,7 @@ module.exports = NodeHelper.create({
         }
       } else {
         console.log("[ASSTNT] Speak Error", err)
+        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED', useAlert:option.useAlert})
       }
     })
   },
@@ -237,6 +238,7 @@ module.exports = NodeHelper.create({
   activateAssistant: function(mode = 'ASSISTANT') {
     console.log('[ASSTNT] GA Activated')
 
+    var endOfSpeech = false
     var gRQC = this.googleRequestCounter // Added by E3V3A
     var transcription = ""
     this.sendSocketNotification('MODE', {mode:'ASSISTANT_STARTED'})
@@ -256,21 +258,27 @@ module.exports = NodeHelper.create({
       conversation
         // send the audio buffer to the speaker
         .on('audio-data', (data) => {
-		  const now = new Date().getTime();
-		  speaker.write(data);
+		  const now = new Date().getTime()
+
+                  speaker.write(data)
 
 		  // kill the speaker after enough data has been sent to it and then let it flush out
-		  spokenResponseLength += data.length;
-		  const audioTime = spokenResponseLength / (24000 * 16 / 8) * 1000;
-		  clearTimeout(speakerTimer);
+		  spokenResponseLength += data.length
+		  const audioTime = spokenResponseLength / (24000 * 16 / 8) * 1000
+		  clearTimeout(speakerTimer)
 		  speakerTimer = setTimeout(() => {
-			speaker.end();
-		  }, audioTime - Math.max(0, now - speakerOpenTime));
+                    if (endOfSpeech) {  // if spech.end was already called we notify here
+                      this.sendSocketNotification('ASSISTANT_FINISHED', mode)
+                    }
+                    endOfSpeech = true
+                    speaker.end()
+		  }, (audioTime - Math.max(0, now - speakerOpenTime)) + 500)
         })
         // done speaking, close the mic
         .on('end-of-utterance', () => { record.stop() })
         // show each word on console as they are understood, while we say it
         .on('transcription', (text) => {
+            endOfSpeech = false
             this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
             transcription = text
             //console.log("[VOX] GA Transcription: ", transcription)  // show entire JS object
@@ -296,13 +304,17 @@ module.exports = NodeHelper.create({
         // once the conversation is ended, see if we need to follow up
         .on('ended', (error, continueConversation) => {
           if (error) {
+            endOfSpeech = true
             console.log('[ASSTNT] Conversation Ended Error:', error)
             this.sendSocketNotification('ERROR', 'CONVERSATION ENDED')
           } else if (continueConversation) {
-            openMicAgain = true;
-          } else {
-//            record.stop()
+            console.log("[ASSTNT - continue conversation]")
+            openMicAgain = true
+            endOfSpeech = false
+          } else if (endOfSpeech) {
             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
+          } else {  // weird case where speech.end is called but the  spech is still heard
+              endOfSpeech = true
           }
         })
         .on('error', (error) => {
