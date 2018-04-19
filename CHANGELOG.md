@@ -10,6 +10,11 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+#### [1.1.1] - 2018-04-17
+
+- Changed handling of config.js so it is now backwards compatible
+- fixed some more GA bugs. It should be stable and robust now and handle conversations correctly
+
 #### [1.1.0] - 2018-04-17
 
 - Changed handling of commands in config
