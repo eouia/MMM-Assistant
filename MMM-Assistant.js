@@ -525,21 +525,31 @@ Module.register("MMM-Assistant",
 
   hotwordDetected : function (type) {
     //  execute commands
-    this.config.snowboy.models[type.index-1].commands.forEach(
-      (command) => {
-        this.sendSocketNotification('LOG', {title: "[Command] ", message: command})
-        if (command.notification == 'ASSISTANT') {
-          this.sendSocketNotification('ACTIVATE_ASSISTANT')
-          this.status = 'ACTIVATE_ASSISTANT'
-        } else if (command.notification == 'MIRROR') {
-          this.status = 'ACTIVATE_COMMAND'
-          this.sendSocketNotification('ACTIVATE_COMMAND')
-        } else {
-          this.status = "COMMAND_MODE"
-          this.sendSocketNotification('NOTIFY', command)
+    if (typeof this.config.snowboy.models[type.index-1].commands !== 'undefined') {
+      this.config.snowboy.models[type.index-1].commands.forEach(
+        (command) => {
+          this.sendSocketNotification('LOG', {title: "[Command] ", message: command})
+          if (command.notification == 'ASSISTANT') {
+            this.sendSocketNotification('ACTIVATE_ASSISTANT')
+            this.status = 'ACTIVATE_ASSISTANT'
+          } else if (command.notification == 'MIRROR') {
+            this.status = 'ACTIVATE_COMMAND'
+            this.sendSocketNotification('ACTIVATE_COMMAND')
+          } else {
+            this.status = "COMMAND_MODE"
+            this.sendSocketNotification('NOTIFY', command)
+          }
         }
+      )
+    } else if (typeof this.config.snowboy.models[type.index-1].hotwords !== 'undefined') {
+      if (this.config.snowboy.models[type.index-1].hotwords == 'ASSISTANT') {
+        this.sendSocketNotification('ACTIVATE_ASSISTANT')
+        this.status = 'ACTIVATE_ASSISTANT'
+      } else if (this.config.snowboy.models[type.index-1].hotwords == 'MIRROR') {
+        this.status = 'ACTIVATE_COMMAND'
+        this.sendSocketNotification('ACTIVATE_COMMAND')
       }
-    )
+    }
     // if last command was not a call for assistant or voice command then activate snowboy
     if (this.status == "COMMAND_MODE") {
       this.sendSocketNotification("NOTIFY", {notification: "HOTWORD_STANDBY"})
