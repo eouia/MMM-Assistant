@@ -112,6 +112,7 @@
             },
         },
         speak: {
+            useGoogle: true,              // [true] Enable Google TTS
             useAlert: true,               // [true]  Enable this to show the understood text of your speech
             language: 'en-US',            // [en-US] To set the default GA speech reply language.
         },
