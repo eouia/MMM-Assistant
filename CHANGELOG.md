@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+#### [1.1.3] - 2018-04-20
+
+- Added Google TTS. Many more languages available than pico2tts
+  Command conversation can now be in languages other than en-GB,de-DE,es-ES,fr-FR,it-IT like nl-NL
+- Added config switch to choose between pico and Google TTS
+- Fixed one more bug in GA. Saying "nevermind" just stopped the conversation without returning to listening mode
+
 #### [1.1.2] - 2018-04-20
 
 - Added timeout for screen

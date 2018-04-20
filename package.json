@@ -24,12 +24,13 @@
     "url": "https://github.com/eouia/MMM-Assistant/issues"
   },
   "dependencies": {
-    "@google-cloud/speech": "^1.3.0",
+    "@google-cloud/speech": "^1.4.0",
+    "@google-cloud/text-to-speech": "^0.1.0",
     "google-assistant": "^0.2.2",
     "node-aplay": "^1.0.3",
     "node-record-lpcm16": "^0.3.0",
     "snowboy": "^1.2.0",
-    "speaker": "^0.4.0"
+    "speaker": "^0.4.1"
   },
   "devDependencies": {
     "electron-rebuild": "^1.7.3",

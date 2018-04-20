@@ -19,6 +19,7 @@ const Sound = require('node-aplay') // Deprecated
 const path = require('path')
 const fs = require('fs')
 const record = require('node-record-lpcm16')
+const textToSpeech = require('@google-cloud/text-to-speech')
 const Detector = require('snowboy').Detector
 const Models = require('snowboy').Models
 const Speaker = require('speaker')
@@ -140,8 +141,13 @@ module.exports = NodeHelper.create({
     option.language = (typeof commandOption.language !== 'undefined') ? commandOption.language : this.config.speak.language
     option.useAlert = (typeof commandOption.useAlert !== 'undefined') ? commandOption.useAlert : this.config.speak.useAlert
     option.originalCommand = (originalCommand) ? originalCommand : ""
+    option.auth = this.config.stt.auth[0]
+    option.useGoogle = this.config.speak.useGoogle
+
     // Use the small footprint Text-to-Speech (TTS): pico2wave
-    var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
+    var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}' 
+    var commandGetSpeech = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}"'
+    var commandSpeak = 'aplay {{file}}'
 
     function getTmpFile() {
         var random = Math.random().toString(36).slice(2),
@@ -155,12 +161,42 @@ module.exports = NodeHelper.create({
       text = text.replace(/\"/g, "'")
       text = text.trim()
 
-      var file = getTmpFile(),
+      var file = getTmpFile()
+      var command = ""
+
+      if (option.useGoogle) {
+        let client = new textToSpeech.TextToSpeechClient(option.auth)
+
+        const request = {
+          input: {text: text},
+          voice: {languageCode: lang, ssmlGender: 'NEUTRAL'},
+          audioConfig: {audioEncoding: 'LINEAR16'},
+        }
+
+        client.synthesizeSpeech(request, (err, response) => {
+          if (err) {
+            console.error('ERROR:', err);
+            return;
+          }
+          fs.writeFile(file, response.audioContent, 'binary', err => {
+            if (err) {
+              console.error('ERROR:', err);
+              return;
+            }
+            command = commandSpeak.replace(/\{\{file\}\}/g, file)
+            exec(command, function(err) {
+              cb && cb(err)
+              fs.unlink(file, ()=>{})
+            })
+          })
+        })
+      } else {
         command = commandTmpl.replace('{{lang}}', lang).replace('{{text}}', text).replace(/\{\{file\}\}/g, file)
         exec(command, function(err) {
             cb && cb(err)
             fs.unlink(file, ()=>{})
-        })
+        }) 
+      }
     }
 
     this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED', useAlert:option.useAlert, originalCommand:option.originalCommand, text:text})
@@ -179,7 +215,9 @@ module.exports = NodeHelper.create({
   },
 
   consoleLog: function(payload) {
-    console.log(payload.title, payload.message)
+  // helper for logging via notification
+  // USAGE: sendSocketNotification("LOG", {title: "", message: ""})
+    if (this.config.debug) console.log(payload.title, payload.message)
   },
 
   activateHotword: function() {
@@ -236,6 +274,7 @@ module.exports = NodeHelper.create({
   },
 
   activateAssistant: function(mode = 'ASSISTANT') {
+//    this.sendSocketNotification("LOG", {title: "[ASSTNT]", message: "GA Activated"})
     console.log('[ASSTNT] GA Activated')
 
     var endOfSpeech = false
@@ -279,9 +318,7 @@ module.exports = NodeHelper.create({
         // show each word on console as they are understood, while we say it
         .on('transcription', (text) => {
             endOfSpeech = false
-            this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
-            transcription = text
-            //console.log("[VOX] GA Transcription: ", transcription)  // show entire JS object
+//            console.log("[VOX] GA Transcription: ", text)  // show entire JS object
             //---------------------------------------------------------------
             // For account/billing purposes:
             // We check if the transcription is complete and update the request
@@ -296,7 +333,12 @@ module.exports = NodeHelper.create({
             //---------------------------------------------------------------
         })
         // what the assistant answered
-        .on('response', text => console.log('[VOX] GA Response: ', text))
+        .on('response', text => {
+           // another special case. Uttering "nevermind" produces no response
+           if (text == "") {
+             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
+           }
+        })
         // if we've requested a volume level change, get the percentage of the new level
         .on('volume-percent', percent => console.log('[VOX] Set Volume [%]: ', percent))
         // the device needs to complete an action

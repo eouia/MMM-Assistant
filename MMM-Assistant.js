@@ -228,6 +228,7 @@ Module.register("MMM-Assistant",
   },
 
   cmd_asstnt_say : function (command, handler) {
+    this.sendSocketNotification('LOG',  {title: "SAY", message: handler.args.something})
     handler.response(handler.args.something)
   },
 
@@ -513,6 +514,10 @@ Module.register("MMM-Assistant",
         this.status = "ERROR"
         console.log("[ASSTNT] Error:", payload)
         this.sendSocketNotification("HOTWORD_STANDBY")
+        break
+      case 'LOG': 
+        // straight back to node helper
+        this.sendSocketNotification(notification, payload)
         break
       case 'MODE':
         this.status = payload.mode
