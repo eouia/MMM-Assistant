@@ -84,6 +84,11 @@
                 }
             ]
         },
+        screen: {
+          on: "vcgencmd display_power 1",
+          off: "vcgencmd display_power 0",
+          timeoff: 120 // seconds before screen is turned off
+        },
         modulemap: [ // this table matches spoken module names to their real name
           ["time", "clock"],
           ["assistant", "MMM-Assistant"]

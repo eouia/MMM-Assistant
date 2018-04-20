@@ -10,7 +10,12 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-#### [1.1.1] - 2018-04-17
+#### [1.1.2] - 2018-04-20
+
+- Added timeout for screen
+- Added screen section in config to specify timeout and screen on/off commands
+
+#### [1.1.1] - 2018-04-19
 
 - Changed handling of config.js so it is now backwards compatible
 - fixed some more GA bugs. It should be stable and robust now and handle conversations correctly

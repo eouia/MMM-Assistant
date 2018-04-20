@@ -90,6 +90,7 @@ Module.register("MMM-Assistant",
     console.log("[ASSTNT] started!")
     this.modulemap = new Map(this.config.modulemap)
     this.commands = []
+//    this.screentimer
     this.status = "START"
     this.config = this.configAssignment({}, this.defaults, this.config)
     this.getCommands( new AssistantCommandRegister(this, this.registerCommand.bind(this)) )
@@ -197,14 +198,32 @@ Module.register("MMM-Assistant",
   },
 
   cmd_asstnt_wakeup : function (command, handler) {
-    var text = ""
-    this.sendSocketNotification('EXECUTE', "vcgencmd display_power 1")
+    if (typeof this.config.screen.on !== 'undefined') {
+      this.sendSocketNotification('EXECUTE', this.config.screen.on)
+    } else {
+      this.sendSocketNotification('EXECUTE', "vcgencmd display_power 1")
+    }
+    if (typeof this.config.screen.timeoff !== 'undefined') {
+      if (typeof this.config.screen.timeoff !== 0) {
+        clearTimeout(this.screenTimer)
+        this.screenTimer = setTimeout(() => {
+          if (typeof this.config.screen.off !== 'undefined') {
+            this.sendSocketNotification('EXECUTE', this.config.screen.off)
+          } else {
+            this.sendSocketNotification('EXECUTE', "vcgencmd display_power 0")
+          }
+        }, this.config.screen.timeoff * 1000)
+      }
+    }
     if (this.status !== "COMMAND_MODE") this.sendSocketNotification("HOTWORD_STANDBY")
   },
 
-  cmd_asstnt_gotosleep : function (command, handler) {
-    var text = ""
-    this.sendSocketNotification('EXECUTE', "vcgencmd display_power 0")
+  cmd_asstnt_gotosleep : function (command = "", handler = "") {
+    if (typeof this.config.screen.off !== 'undefined') {
+      this.sendSocketNotification('EXECUTE', this.config.screen.off)
+    } else {
+      this.sendSocketNotification('EXECUTE', "vcgencmd display_power 0")
+    }
     if (this.status !== "COMMAND_MODE") this.sendSocketNotification("HOTWORD_STANDBY")
   },
 
