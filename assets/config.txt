@@ -25,7 +25,7 @@
                     commands: [
                       {
                         notification: "COMMAND",
-                        parameter: "show all modules"
+                        parameter: "show overview"
                       },
                       {
                         notification: "COMMAND",
@@ -91,7 +91,8 @@
         },
         modulemap: [ // this table matches spoken module names to their real name
           ["time", "clock"],
-          ["assistant", "MMM-Assistant"]
+          ["assistant", "MMM-Assistant"],
+          ["overview", ["clock", "currentweather"]]
         ],
         record: {
             threshold: 0,                 // Default. No need to change.

@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+#### [1.1.4] - 2018-04-25
+
+- Added command command to stay awake. This cancels the screen timeout
+- Added modulemap can now be a set of modules
+- Added command to hide all modules except the selected one. This can be a set from the modulemap so 
+    effectively this can be used to show named pages
+
 #### [1.1.3] - 2018-04-20
 
 - Added Google TTS. Many more languages available than pico2tts

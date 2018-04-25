@@ -132,6 +132,11 @@ Module.register("MMM-Assistant",
           callback : 'cmd_asstnt_list_modules'
         },
         {
+          command: this.translate("CMD_HIDE_ALL_MODULES_EXCEPT"),
+          description : this.translate("CMD_HIDE_ALL_MODULES_EXCEPT_DESCRIPTION"),
+          callback : 'cmd_asstnt_hideall_except',
+        },
+        {
           command: this.translate("CMD_HIDE_ALL_MODULES"),
           description : this.translate("CMD_HIDE_ALL_MODULES_DESCRIPTION"),
           callback : 'cmd_asstnt_hideall',
@@ -170,6 +175,11 @@ Module.register("MMM-Assistant",
           command: this.translate("CMD_WAKE_UP"),
           description : this.translate("CMD_WAKE_UP_DESCRIPTION"),
           callback : 'cmd_asstnt_wakeup',
+        },
+        {
+          command: this.translate("CMD_STAY_AWAKE"),
+          description : this.translate("CMD_STAY_AWAKE_DESCRIPTION"),
+          callback : 'cmd_asstnt_stay_awake',
         },
         {
           command: this.translate("CMD_GOTO_SLEEP"),
@@ -218,7 +228,12 @@ Module.register("MMM-Assistant",
     if (this.status !== "COMMAND_MODE") this.sendSocketNotification("HOTWORD_STANDBY")
   },
 
-  cmd_asstnt_gotosleep : function (command = "", handler = "") {
+  cmd_asstnt_stay_awake : function (command, handler) {
+    clearTimeout(this.screenTimer)
+    if (this.status !== "COMMAND_MODE") this.sendSocketNotification("HOTWORD_STANDBY")
+  },
+
+  cmd_asstnt_gotosleep : function (command, handler) {
     if (typeof this.config.screen.off !== 'undefined') {
       this.sendSocketNotification('EXECUTE', this.config.screen.off)
     } else {
@@ -247,9 +262,10 @@ Module.register("MMM-Assistant",
     var text = this.translate("CMD_HIDE_MODULE_RESULT")
     var lockString = this.name
     var target = handler.args['module']
-    MM.getModules().forEach( (m)=> {
-      if (m.name == target) {m.hide(0, {lockString:lockString})}
-      else if (m.name == this.modulemap.get(target)) {m.hide(0, {lockString:lockString})}
+    var moduleSet = this.modulemap.get(target)
+    if (typeof moduleSet == 'undefined') moduleSet = target
+    MM.getModules().withClass(moduleSet).forEach( (m)=> {
+       m.hide(0, {lockString:lockString})
     })
     if (this.status !== "COMMAND_MODE") {
       this.sendSocketNotification("HOTWORD_STANDBY")
@@ -273,9 +289,29 @@ Module.register("MMM-Assistant",
     var text = this.translate("CMD_SHOW_MODULE_RESULT")
     var lockString = this.name
     var target = handler.args['module']
-    MM.getModules().forEach( (m)=> {
-      if (m.name == target) {m.show(0, {lockString:lockString})}
-      else if (m.name == this.modulemap.get(target)) {m.show(0, {lockString:lockString})}
+    var moduleSet = this.modulemap.get(target)
+    if (typeof moduleSet == 'undefined') moduleSet = target
+    MM.getModules().withClass(moduleSet).forEach( (m)=> {
+       m.show(0, {lockString:lockString})
+    })
+    if (this.status !== "COMMAND_MODE") {
+      this.sendSocketNotification("HOTWORD_STANDBY")
+    } else {
+      handler.response(text)
+    }
+  },
+
+  cmd_asstnt_hideall_except : function (command, handler) {
+    var text = this.translate("CMD_HIDE_ALL_MODULES_EXCEPT_RESULT")
+    var lockString = this.name
+    var target = handler.args['module']
+    var moduleSet = this.modulemap.get(target)
+    if (typeof moduleSet == 'undefined') moduleSet = target
+    MM.getModules().exceptWithClass(moduleSet).forEach( (m)=> {
+       if (m.name != this.name) {m.hide(1000, {lockString:lockString})}
+    })
+    MM.getModules().withClass(moduleSet).forEach( (m)=> {
+       m.show(1000, {lockString:lockString})
     })
     if (this.status !== "COMMAND_MODE") {
       this.sendSocketNotification("HOTWORD_STANDBY")

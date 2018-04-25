@@ -133,7 +133,7 @@ module.exports = NodeHelper.create({
   },
 
   test: function(test) {
-    this.sendSocketNotification('COMMAND', test)
+    console.log("TESTING")
   },
 
   activateSpeak: function(text, commandOption={}, originalCommand = "") {
@@ -217,7 +217,7 @@ module.exports = NodeHelper.create({
   consoleLog: function(payload) {
   // helper for logging via notification
   // USAGE: sendSocketNotification("LOG", {title: "", message: ""})
-    if (this.config.debug) console.log(payload.title, payload.message)
+    console.log(payload.title, payload.message)
   },
 
   activateHotword: function() {
@@ -274,7 +274,6 @@ module.exports = NodeHelper.create({
   },
 
   activateAssistant: function(mode = 'ASSISTANT') {
-//    this.sendSocketNotification("LOG", {title: "[ASSTNT]", message: "GA Activated"})
     console.log('[ASSTNT] GA Activated')
 
     var endOfSpeech = false

@@ -16,6 +16,9 @@
   "CMD_HIDE_ALL_MODULES" : "hide all modules",
   "CMD_HIDE_ALL_MODULES_DESCRIPTION" : "This command will hide all your available modules.",
   "CMD_HIDE_ALL_MODULES_RESULT" : "All modules will be hidden.",
+  "CMD_HIDE_ALL_MODULES_EXCEPT" : "show :module",
+  "CMD_HIDE_ALL_MODULES_EXCEPT_DESCRIPTION" : "This command will hide all modules except the selected module(s)",
+  "CMD_HIDE_ALL_MODULES_EXCEPT_RESULT" : "All modules will be hidden except the selected ones",
   "CMD_HIDE_MODULE" : "hide module :module",
   "CMD_HIDE_MODULE_DESCRIPTION" : "This command will hide the specified module.",
   "CMD_HIDE_MODULE_RESULT" : "The module will be hidden.",
@@ -33,6 +36,8 @@
   "CMD_SHUTDOWN_DESCRIPTION" : "This command will shutdown the magic mirror instantly.",
   "CMD_WAKE_UP" : "turn the screen on",
   "CMD_WAKE_UP_DESCRIPTION" : "Turn the screen on",
+  "CMD_STAY_AWAKE" : "stay awake",
+  "CMD_STAY_AWAKE_DESCRIPTION" : "Do not turn the screen off",
   "CMD_GOTO_SLEEP" : "turn the screen off",
   "CMD_GOTO_SLEEP_DESCRIPTION" : "Turn the screen off",
   "TELBOT_CMD_GA_DESCRIPTION" : "Send text to Google Assistant."
