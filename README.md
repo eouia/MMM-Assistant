@@ -1,3 +1,8 @@
+#DEPRECATED!
+This module is not supported anymore. The legacy dependencies are too old to maintain.Thank you so far.
+
+You can try [MMM-AssistantMk2](https://github.com/eouia/MMM-AssistantMk2) instead.
+
 ## MagicMirror Module: MMM-Assistant
 
 [![MagicMirror2](https://img.shields.io/badge/MagicMirror-2.2.2-lightgray.svg)](https://github.com/MichMich/MagicMirror)
