@@ -1,4 +1,4 @@
-#DEPRECATED!
+# DEPRECATED!
 This module is not supported anymore. The legacy dependencies are too old to maintain.Thank you so far.
 
 You can try [MMM-AssistantMk2](https://github.com/eouia/MMM-AssistantMk2) instead.
