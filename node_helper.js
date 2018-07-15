@@ -19,6 +19,7 @@ const Sound = require('node-aplay') // Deprecated
 const path = require('path')
 const fs = require('fs')
 const record = require('node-record-lpcm16')
+const textToSpeech = require('@google-cloud/text-to-speech')
 const Detector = require('snowboy').Detector
 const Models = require('snowboy').Models
 const Speaker = require('speaker')
@@ -95,6 +96,23 @@ module.exports = NodeHelper.create({
           if(this.pause.size == 0) this.activateSpeak(payload.text, payload.option, payload.originalCommand)
         }
         break
+      case 'NOTIFY':
+        if (payload.notification !== "HOTWORD_STANDBY") {
+          if (payload.notification == "PLAY") {
+            new Sound(path.resolve(__dirname, payload.parameter)).play();
+          } else {
+            this.sendSocketNotification("NOTIFY", payload) 
+          }
+        } else {
+          this.status = 'HOTWORD_DETECTED'
+          this.sendSocketNotification("HOTWORD_STANDBY")
+        }
+        break
+      case 'EXECUTE':
+        execute(payload, function(callback) {
+          console.log("[EXECUTE] ", callback)
+        })
+        break
       case 'REBOOT':
         execute('sudo reboot now', function(callback) {
           console.log(callback)
@@ -108,11 +126,14 @@ module.exports = NodeHelper.create({
       case 'TEST':
         this.test(payload)
         break
+      case 'LOG':
+        this.consoleLog(payload)
+        break
     }
   },
 
   test: function(test) {
-    this.sendSocketNotification('COMMAND', test)
+    console.log("TESTING")
   },
 
   activateSpeak: function(text, commandOption={}, originalCommand = "") {
@@ -120,8 +141,13 @@ module.exports = NodeHelper.create({
     option.language = (typeof commandOption.language !== 'undefined') ? commandOption.language : this.config.speak.language
     option.useAlert = (typeof commandOption.useAlert !== 'undefined') ? commandOption.useAlert : this.config.speak.useAlert
     option.originalCommand = (originalCommand) ? originalCommand : ""
+    option.auth = this.config.stt.auth[0]
+    option.useGoogle = this.config.speak.useGoogle
+
     // Use the small footprint Text-to-Speech (TTS): pico2wave
-    var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}'
+    var commandTmpl = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}" && aplay {{file}}' 
+    var commandGetSpeech = 'pico2wave -l "{{lang}}" -w {{file}} "{{text}}"'
+    var commandSpeak = 'aplay {{file}}'
 
     function getTmpFile() {
         var random = Math.random().toString(36).slice(2),
@@ -135,12 +161,42 @@ module.exports = NodeHelper.create({
       text = text.replace(/\"/g, "'")
       text = text.trim()
 
-      var file = getTmpFile(),
+      var file = getTmpFile()
+      var command = ""
+
+      if (option.useGoogle) {
+        let client = new textToSpeech.TextToSpeechClient(option.auth)
+
+        const request = {
+          input: {text: text},
+          voice: {languageCode: lang, ssmlGender: 'NEUTRAL'},
+          audioConfig: {audioEncoding: 'LINEAR16'},
+        }
+
+        client.synthesizeSpeech(request, (err, response) => {
+          if (err) {
+            console.error('ERROR:', err);
+            return;
+          }
+          fs.writeFile(file, response.audioContent, 'binary', err => {
+            if (err) {
+              console.error('ERROR:', err);
+              return;
+            }
+            command = commandSpeak.replace(/\{\{file\}\}/g, file)
+            exec(command, function(err) {
+              cb && cb(err)
+              fs.unlink(file, ()=>{})
+            })
+          })
+        })
+      } else {
         command = commandTmpl.replace('{{lang}}', lang).replace('{{text}}', text).replace(/\{\{file\}\}/g, file)
         exec(command, function(err) {
             cb && cb(err)
             fs.unlink(file, ()=>{})
-        })
+        }) 
+      }
     }
 
     this.sendSocketNotification('MODE', {mode:'SPEAK_STARTED', useAlert:option.useAlert, originalCommand:option.originalCommand, text:text})
@@ -153,14 +209,19 @@ module.exports = NodeHelper.create({
         }
       } else {
         console.log("[ASSTNT] Speak Error", err)
+        this.sendSocketNotification('MODE', {mode:'SPEAK_ENDED', useAlert:option.useAlert})
       }
     })
   },
 
+  consoleLog: function(payload) {
+  // helper for logging via notification
+  // USAGE: sendSocketNotification("LOG", {title: "", message: ""})
+    console.log(payload.title, payload.message)
+  },
 
   activateHotword: function() {
     console.log('[ASSTNT] Snowboy Activated')
-
     this.sendSocketNotification('MODE', {mode:'HOTWORD_STARTED'})
     new Sound(path.resolve(__dirname, 'resources/ding.wav')).play();
 
@@ -201,8 +262,9 @@ module.exports = NodeHelper.create({
 
     detector.on('hotword', (index, hotword, buffer)=>{
       record.stop()
-      new Sound(path.resolve(__dirname, 'resources/dong.wav')).play()
-      this.sendSocketNotification('HOTWORD_DETECTED', hotword)
+      var confirm = (typeof this.config.snowboy.models[index-1].confirm !== 'undefined') ?  this.config.snowboy.models[index-1].confirm : 'resources/dong.wav'
+      new Sound(path.resolve(__dirname, confirm)).play()
+      this.sendSocketNotification('HOTWORD_DETECTED', {hotword:hotword, index:index})
       this.sendSocketNotification('MODE', {mode:'HOTWORD_DETECTED'})
       if (this.pause.size > 0) this.sendSocketNotification('PAUSED')
       return
@@ -214,6 +276,7 @@ module.exports = NodeHelper.create({
   activateAssistant: function(mode = 'ASSISTANT') {
     console.log('[ASSTNT] GA Activated')
 
+    var endOfSpeech = false
     var gRQC = this.googleRequestCounter // Added by E3V3A
     var transcription = ""
     this.sendSocketNotification('MODE', {mode:'ASSISTANT_STARTED'})
@@ -225,6 +288,7 @@ module.exports = NodeHelper.create({
       let spokenResponseLength = 0;
       let speakerOpenTime = 0;
       let speakerTimer;
+      let openMicAgain = false;
 
       // This is based on:
       //    ./node_modules/google-assistant/examples/mic-speaker.js
@@ -232,27 +296,28 @@ module.exports = NodeHelper.create({
       conversation
         // send the audio buffer to the speaker
         .on('audio-data', (data) => {
-          //record.stop()
-          const now = new Date().getTime()
-          if (mode == 'ASSISTANT') {
-            this.sendSocketNotification('MODE', {mode:'ASSISTANT_SPEAKING'})
-            speaker.write(data);
-            spokenResponseLength += data.length;
-            const audioTime = spokenResponseLength / (this.config.assistant.conversation.audio.sampleRateOut * 16 / 8) * 1000;
-            clearTimeout(speakerTimer);
-            speakerTimer = setTimeout(() => { speaker.end(); }, audioTime - Math.max(0, now - speakerOpenTime));
-          } else {
-            //record.stop()
-            speaker.end()
-          }
+		  const now = new Date().getTime()
+
+                  speaker.write(data)
+
+		  // kill the speaker after enough data has been sent to it and then let it flush out
+		  spokenResponseLength += data.length
+		  const audioTime = spokenResponseLength / (24000 * 16 / 8) * 1000
+		  clearTimeout(speakerTimer)
+		  speakerTimer = setTimeout(() => {
+                    if (endOfSpeech) {  // if spech.end was already called we notify here
+                      this.sendSocketNotification('ASSISTANT_FINISHED', mode)
+                    }
+                    endOfSpeech = true
+                    speaker.end()
+		  }, (audioTime - Math.max(0, now - speakerOpenTime)) + 500)
         })
         // done speaking, close the mic
         .on('end-of-utterance', () => { record.stop() })
         // show each word on console as they are understood, while we say it
         .on('transcription', (text) => {
-            this.sendSocketNotification('ASSISTANT_TRANSCRIPTION', text)
-            transcription = text
-            //console.log("[VOX] GA Transcription: ", transcription)  // show entire JS object
+            endOfSpeech = false
+//            console.log("[VOX] GA Transcription: ", text)  // show entire JS object
             //---------------------------------------------------------------
             // For account/billing purposes:
             // We check if the transcription is complete and update the request
@@ -265,38 +330,32 @@ module.exports = NodeHelper.create({
                 console.log("[VOX] GA RQC: ", gRQC)
             }
             //---------------------------------------------------------------
-            //record.stop()
-            if (mode == 'COMMAND') {
-              console.log("[ASSTNT] Command understood as: ", transcription)
-              this.sendSocketNotification('COMMAND', transcription)
-            }
         })
         // what the assistant answered
-        .on('response', text => console.log('[VOX] GA Response: ', text))
+        .on('response', text => {
+           // another special case. Uttering "nevermind" produces no response
+           if (text == "") {
+             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
+           }
+        })
         // if we've requested a volume level change, get the percentage of the new level
         .on('volume-percent', percent => console.log('[VOX] Set Volume [%]: ', percent))
         // the device needs to complete an action
-        //.on('device-action', action => console.log('[VOX] Action:', action))
+        .on('device-action', action => console.log('[VOX] Action:', action))
         // once the conversation is ended, see if we need to follow up
         .on('ended', (error, continueConversation) => {
-          if (this.pause.size > 0) {
-            record.stop()
-            speaker.end()
-            this.sendSocketNotification('PAUSED')
-            return
-          }
           if (error) {
+            endOfSpeech = true
             console.log('[ASSTNT] Conversation Ended Error:', error)
             this.sendSocketNotification('ERROR', 'CONVERSATION ENDED')
           } else if (continueConversation) {
-            if (mode == 'ASSISTANT') {
-              assistant.start()
-            } else {
-              //@.@ What? There is no stop-conversation in gRpc ?????
-            }
-          } else {
-            record.stop()
+            console.log("[ASSTNT - continue conversation]")
+            openMicAgain = true
+            endOfSpeech = false
+          } else if (endOfSpeech) {
             this.sendSocketNotification('ASSISTANT_FINISHED', mode)
+          } else {  // weird case where speech.end is called but the  spech is still heard
+              endOfSpeech = true
           }
         })
         .on('error', (error) => {
@@ -304,7 +363,7 @@ module.exports = NodeHelper.create({
           record.stop()
           speaker.end() // Added by E3V3A: fix attempt for issue #25 --> Need to check for: "Error: Service unavailable"
           this.sendSocketNotification('ERROR', 'CONVERSATION')
-          return // added by E3V3A: Do we also need a return?
+//          return // added by E3V3A: Do we also need a return?
         })
 
       // pass the mic audio to the assistant
@@ -317,8 +376,12 @@ module.exports = NodeHelper.create({
         sampleRate: this.config.assistant.conversation.audio.sampleRateOut,
       });
       speaker
-        .on('open', () => { speakerOpenTime = new Date().getTime(); })
-        .on('close', () => { conversation.end(); });
+        .on('open', () => { 
+		  clearTimeout(speakerTimer);
+		  spokenResponseLength = 0;
+		  speakerOpenTime = new Date().getTime();
+		})
+        .on('close', () => { if (openMicAgain) assistant.start(this.config.assistant.conversation); });
     };
 
     // Setup the assistant
